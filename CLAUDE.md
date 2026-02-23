@@ -22,14 +22,15 @@ When creating any of the following, put them in `internal/`:
 
 ```
 domain-shark/
-├── .claude-plugin/     # Plugin manifest
+├── SKILL.md            # The skill (repo root — required by npx skills add)
+├── CLAUDE.md           # This file
+├── README.md           # Public-facing docs
 ├── hooks/              # Git hooks (ships with repo)
 ├── internal/           # Gitignored — all internal docs
-├── skills/domain/      # The Claude Code skill (SKILL.md)
-├── worker/             # Cloudflare Worker proxy
-├── CLAUDE.md           # This file
-└── README.md           # Public-facing docs
+└── worker/             # Cloudflare Worker proxy
 ```
+
+Install command: `npx skills add mattd3080/domain-shark`
 
 ## Worker
 

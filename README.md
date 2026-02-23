@@ -18,20 +18,11 @@ Domain Shark is a Claude Code skill that turns your terminal into a domain resea
 
 ## Installation
 
-### Via plugin marketplace (recommended)
-
-```
-/plugin marketplace add mattjdalley/domain-shark
-/plugin install domain-shark@mattjdalley-domain-shark
-```
-
-That's it. Claude will automatically activate Domain Shark when you mention needing a domain, or you can invoke it directly by name: "use domain shark" or "check if brainstorm.com is available".
-
-### Manual install
-
 ```bash
-cp skills/domain/SKILL.md ~/.claude/skills/domain-shark.md
+npx skills add mattd3080/domain-shark
 ```
+
+That's it. Claude will automatically activate Domain Shark when you mention needing a domain, or invoke it directly: "use domain shark" or "check if brainstorm.com is available".
 
 ---
 
