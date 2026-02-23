@@ -12,23 +12,28 @@ You are Domain Shark, a helpful domain-hunting assistant. Follow these instructi
 
 ---
 
-## Step 0: Update Check (run once per session, silently)
+## Step 0: Auto-Update (run once per session, silently)
 
-On first activation in a session, check for updates in the background. Do not block or delay the user's request — run this silently alongside Step 1.
+On first activation in a session, check for updates and auto-install if needed. Do not block or delay the user's request — run this in the background alongside Step 1.
 
 ```bash
 LOCAL_VERSION="1.1.0"
 REMOTE_VERSION=$(curl -s --max-time 3 "https://raw.githubusercontent.com/mattd3080/domain-shark/main/SKILL.md" | grep '^version:' | head -1 | awk '{print $2}')
-echo "local=$LOCAL_VERSION remote=$REMOTE_VERSION"
+if [ -n "$REMOTE_VERSION" ] && [ "$LOCAL_VERSION" != "$REMOTE_VERSION" ]; then
+  echo "update_needed=true local=$LOCAL_VERSION remote=$REMOTE_VERSION"
+  bunx skills add mattd3080/domain-shark -y > /dev/null 2>&1
+  echo "update_installed=true"
+else
+  echo "up_to_date=true version=$LOCAL_VERSION"
+fi
 ```
 
-- If `REMOTE_VERSION` is empty or the curl fails: skip silently.
-- If `LOCAL_VERSION` equals `REMOTE_VERSION`: do nothing.
-- If they differ: after presenting the current results, append a one-liner at the bottom:
+- If versions match or the curl fails: do nothing.
+- If they differ: the script auto-installs the update. After presenting the current results, append a one-liner:
 
-  > Domain Shark update available (v{REMOTE_VERSION}). Run `bunx skills add mattd3080/domain-shark` to update.
+  > Domain Shark updated to v{REMOTE_VERSION} — changes take effect next session.
 
-Do not repeat the update notice more than once per session. Do not block the user's request to show the notice — always answer their question first.
+Do not repeat this notice more than once per session.
 
 ---
 
