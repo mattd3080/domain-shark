@@ -21,7 +21,5 @@ Thumbs.db
 .env
 .env.*
 
-# Project docs (keep out of public repo)
-PRD.md
-PROGRESS.md
-handoffs/
+# Internal docs (keep out of public repo)
+internal/

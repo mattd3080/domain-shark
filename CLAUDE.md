@@ -1,0 +1,55 @@
+# Domain Shark — Project Instructions
+
+## Internal docs
+
+All PRDs, progress logs, plans, handoffs, and internal notes go in `internal/`. This directory is gitignored and never ships to GitHub.
+
+```
+internal/
+├── PRD.md
+├── PROGRESS.md
+└── handoffs/
+```
+
+When creating any of the following, put them in `internal/`:
+- Product requirements documents
+- Implementation plans
+- Progress logs
+- Phase handoffs and checkpoints
+- Anything not meant for public contributors
+
+## Project structure
+
+```
+domain-shark/
+├── .claude-plugin/     # Plugin manifest
+├── hooks/              # Git hooks (ships with repo)
+├── internal/           # Gitignored — all internal docs
+├── skills/domain/      # The Claude Code skill (SKILL.md)
+├── worker/             # Cloudflare Worker proxy
+├── CLAUDE.md           # This file
+└── README.md           # Public-facing docs
+```
+
+## Worker
+
+The Cloudflare Worker is deployed at:
+`https://domain-shark-proxy.mattjdalley.workers.dev/v1/premium-check`
+
+Secrets live in Cloudflare (never in files):
+- `FASTLY_API_TOKEN` — set via `wrangler secret put FASTLY_API_TOKEN`
+- `ALERT_WEBHOOK` — optional, for circuit breaker alerts
+
+To redeploy after changes:
+```bash
+cd worker && npm run deploy
+```
+
+## Secret hygiene
+
+- Never put API keys or tokens in tracked files
+- Secrets go in `.dev.vars` (gitignored) for local dev, or as Cloudflare secrets for production
+- The pre-commit hook (`hooks/pre-commit`) scans for accidental leaks — install it after cloning:
+  ```bash
+  cp hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+  ```
