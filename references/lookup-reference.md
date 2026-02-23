@@ -5,13 +5,14 @@
 Endpoint: `https://rdap.org/domain/{domain}`
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/{domain}
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/{domain}
 ```
 
 - `-s` — silent mode
 - `-o /dev/null` — discard body
 - `-w "%{http_code}"` — print only the HTTP status code
-- `--max-time 5` — timeout after 5 seconds
+- `-L` — follow redirects (rdap.org returns 302 to the authoritative server — required)
+- `--max-time 10` — timeout after 10 seconds (allows for the redirect hop)
 
 Status codes:
 - `404` → Available (definitive)

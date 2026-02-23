@@ -69,16 +69,16 @@ Run all checks in parallel using bash background processes. The following is a t
 ```bash
 TMPFILE=$(mktemp)
 
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainstorm.com  > "${TMPFILE}.brainstorm.com"  &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainstorm.dev  > "${TMPFILE}.brainstorm.dev"  &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainstorm.io   > "${TMPFILE}.brainstorm.io"   &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainstorm.ai   > "${TMPFILE}.brainstorm.ai"   &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainstorm.co   > "${TMPFILE}.brainstorm.co"   &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainstorm.app  > "${TMPFILE}.brainstorm.app"  &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainstorm.xyz  > "${TMPFILE}.brainstorm.xyz"  &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainstorm.me   > "${TMPFILE}.brainstorm.me"   &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainstorm.sh   > "${TMPFILE}.brainstorm.sh"   &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainstorm.cc   > "${TMPFILE}.brainstorm.cc"   &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainstorm.com  > "${TMPFILE}.brainstorm.com"  &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainstorm.dev  > "${TMPFILE}.brainstorm.dev"  &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainstorm.io   > "${TMPFILE}.brainstorm.io"   &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainstorm.ai   > "${TMPFILE}.brainstorm.ai"   &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainstorm.co   > "${TMPFILE}.brainstorm.co"   &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainstorm.app  > "${TMPFILE}.brainstorm.app"  &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainstorm.xyz  > "${TMPFILE}.brainstorm.xyz"  &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainstorm.me   > "${TMPFILE}.brainstorm.me"   &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainstorm.sh   > "${TMPFILE}.brainstorm.sh"   &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainstorm.cc   > "${TMPFILE}.brainstorm.cc"   &
 
 wait
 
@@ -273,29 +273,29 @@ Always verify a ccTLD exists and accepts registrations before suggesting it.
 TMPDIR=$(mktemp -d)
 
 # --- Strategy 2: Close variations ---
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/getbrainstorm.com   > "$TMPDIR/getbrainstorm.com"   &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/trybrainstorm.com   > "$TMPDIR/trybrainstorm.com"   &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainstormhq.com    > "$TMPDIR/brainstormhq.com"    &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainstormlabs.com  > "$TMPDIR/brainstormlabs.com"  &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainstormapp.com   > "$TMPDIR/brainstormapp.com"   &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/getbrainstorm.com   > "$TMPDIR/getbrainstorm.com"   &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/trybrainstorm.com   > "$TMPDIR/trybrainstorm.com"   &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainstormhq.com    > "$TMPDIR/brainstormhq.com"    &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainstormlabs.com  > "$TMPDIR/brainstormlabs.com"  &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainstormapp.com   > "$TMPDIR/brainstormapp.com"   &
 
 # --- Strategy 3: Synonyms ---
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/ideate.com          > "$TMPDIR/ideate.com"          &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/ideate.io           > "$TMPDIR/ideate.io"           &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/thinkstorm.com      > "$TMPDIR/thinkstorm.com"      &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainwave.io        > "$TMPDIR/brainwave.io"        &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/ideate.com          > "$TMPDIR/ideate.com"          &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/ideate.io           > "$TMPDIR/ideate.io"           &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/thinkstorm.com      > "$TMPDIR/thinkstorm.com"      &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainwave.io        > "$TMPDIR/brainwave.io"        &
 
 # --- Strategy 4: Creative reconstruction ---
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/ideaforge.dev       > "$TMPDIR/ideaforge.dev"       &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/mindspark.ai        > "$TMPDIR/mindspark.ai"        &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/neuronflow.com      > "$TMPDIR/neuronflow.com"      &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/ideaforge.dev       > "$TMPDIR/ideaforge.dev"       &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/mindspark.ai        > "$TMPDIR/mindspark.ai"        &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/neuronflow.com      > "$TMPDIR/neuronflow.com"      &
 
 wait
 
 # --- Strategy 5: Domain hacks (RDAP — same as other strategies) ---
 # Run these after the RDAP batch above
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainstor.me  > "$TMPDIR/brainstor.me"  &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/brainstorm.is > "$TMPDIR/brainstorm.is" &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainstor.me  > "$TMPDIR/brainstor.me"  &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/brainstorm.is > "$TMPDIR/brainstorm.is" &
 wait
 
 # Read all results (404 = available, 200 = taken, else = ❓ — apply DoH fallback per lookup-reference.md)
@@ -501,17 +501,17 @@ For each name:
 TMPDIR=$(mktemp -d)
 
 # Batch 1 (domains 1-25)
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/vexapp.com    > "$TMPDIR/vexapp.com"    &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/vexapp.dev    > "$TMPDIR/vexapp.dev"    &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/zolt.io       > "$TMPDIR/zolt.io"       &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/zolt.dev      > "$TMPDIR/zolt.dev"      &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/gath.er       > "$TMPDIR/gath.er"       &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/vexapp.com    > "$TMPDIR/vexapp.com"    &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/vexapp.dev    > "$TMPDIR/vexapp.dev"    &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/zolt.io       > "$TMPDIR/zolt.io"       &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/zolt.dev      > "$TMPDIR/zolt.dev"      &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/gath.er       > "$TMPDIR/gath.er"       &
 # ... (up to 30 total in this batch)
 wait
 
 # Batch 2 (domains 26-50)
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/lumora.com    > "$TMPDIR/lumora.com"    &
-curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://rdap.org/domain/lumora.io     > "$TMPDIR/lumora.io"     &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/lumora.com    > "$TMPDIR/lumora.com"    &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/lumora.io     > "$TMPDIR/lumora.io"     &
 # ... (up to 30 total in this batch)
 wait
 
