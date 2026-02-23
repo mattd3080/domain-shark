@@ -1,0 +1,7 @@
+{
+  "name": "domain-shark",
+  "description": "Domain availability checker and brainstorm tool. Checks RDAP/WHOIS/DNS in parallel, generates name ideas across 7 categories, and searches the aftermarket for domains listed for sale.",
+  "author": {
+    "name": "Matt Dalley"
+  }
+}

@@ -1,0 +1,54 @@
+#!/bin/sh
+# Domain Shark — pre-commit secret scanner
+# Blocks commits that appear to contain API tokens or secrets.
+#
+# Install: cp hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+set -e
+
+ERRORS=0
+
+# Patterns that indicate a hardcoded secret value (not a comment, not a placeholder)
+SECRET_PATTERNS='
+FASTLY_API_TOKEN\s*=\s*[A-Za-z0-9_\-]{20,}
+CLOUDFLARE_API_TOKEN\s*=\s*[A-Za-z0-9_\-]{20,}
+RAPIDAPI_KEY\s*=\s*[A-Za-z0-9_\-]{20,}
+Authorization:\s*Bearer\s+[A-Za-z0-9_\-\.]{20,}
+Fastly-Key:\s*[A-Za-z0-9_\-]{20,}
+x-rapidapi-key:\s*[A-Za-z0-9_\-]{20,}
+"fastlyApiToken"\s*:\s*"[A-Za-z0-9_\-]{20,}
+'
+
+# Files that should never be staged
+BLOCKED_FILES='.dev.vars .env'
+
+# Check for blocked filenames in staged files
+for f in $BLOCKED_FILES; do
+  if git diff --cached --name-only | grep -qF "$f"; then
+    echo "ERROR: Blocked file staged for commit: $f"
+    ERRORS=1
+  fi
+done
+
+# Check staged file contents for secret patterns
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -n "$STAGED_FILES" ]; then
+  echo "$SECRET_PATTERNS" | while IFS= read -r pattern; do
+    [ -z "$pattern" ] && continue
+    # Search staged content (not working tree) for the pattern
+    if git diff --cached -- $STAGED_FILES | grep -qE "^\+.*$pattern"; then
+      echo "ERROR: Possible secret detected in staged changes (pattern: $pattern)"
+      ERRORS=1
+    fi
+  done
+fi
+
+if [ "$ERRORS" -ne 0 ]; then
+  echo ""
+  echo "Commit blocked. Remove secrets before committing."
+  echo "If this is a false positive, review the flagged lines carefully."
+  exit 1
+fi
+
+exit 0

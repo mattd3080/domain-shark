@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Wrangler
+.wrangler/
+.dev.vars
+
+# Build artifacts
+worker/report/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+
+# Environment and secrets
+.env
+.env.*
+
+# Project docs (keep out of public repo)
+PRD.md
+PROGRESS.md
+handoffs/
