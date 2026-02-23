@@ -1,7 +1,7 @@
 ---
 name: domain-shark
 description: This skill should be used when the user asks to "check if a domain is available", "find a domain name", "brainstorm domain names", "is X.com taken", "search for domains", or is trying to name a product, app, or startup and needs domain options. Also activate when the user mentions needing a domain or asks about aftermarket domains listed for sale.
-version: 1.1.0
+version: 1.2.0
 allowed-tools: Bash
 metadata: {"openclaw": {"requires": {"bins": ["curl"]}, "homepage": "https://github.com/mattd3080/domain-shark"}}
 ---
@@ -131,7 +131,7 @@ For each domain checked, classify it as one of three states:
 |-------------|---------------|--------|
 | 404 | Available | ✅ |
 | 200 | Taken | ❌ |
-| Anything else (000, timeout, 5xx, etc.) | Couldn't check | ❓ |
+| Anything else (000, 429, timeout, 5xx, etc.) | Couldn't check | ❓ |
 
 ### 3d. Build the Affiliate Links
 
@@ -141,8 +141,7 @@ For each domain, determine the correct registrar using the routing table below, 
 
 | TLD | Registrar | Search URL |
 |-----|-----------|------------|
-| `.st`, `.ly`, `.is`, `.to`, `.pt`, `.my`, `.gg` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
-| `.nu` | Namecheap | `https://www.namecheap.com/domains/registration/results/?domain={domain}` |
+| `.st`, `.ly`, `.is`, `.to`, `.pt`, `.my`, `.gg`, `.nu` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
 | `.er`, `.al` | — | Non-registrable (see note below) |
 | Everything else | name.com | `https://www.name.com/domain/search/{domain}` |
 
@@ -249,7 +248,7 @@ When these signals are present, add a warning:
 
 When the user's requested domain is taken, automatically generate and check alternatives using the 5 strategies below. Run all RDAP checks in parallel (using the fallback chain from the Lookup Reference section for ccTLDs). Present only available domains, grouped by strategy.
 
-**IMPORTANT — Track B bash timeout:** Track B checks can run 30–50+ curl requests. Always set the bash timeout to at least 3 minutes (180000ms) for Track B commands. Use `--max-time 5` (not 10) per curl — these are bonus alternatives where speed matters more than waiting for slow servers.
+**IMPORTANT — Track B bash timeout:** Track B checks can run 30–50+ curl requests. Always set the bash timeout to at least 5 minutes (300000ms) for Track B commands. Use `--max-time 8` per curl to allow time for rdap.org's 302 redirect hop to the authoritative RDAP server.
 
 Do not ask if the user wants alternatives — just run them. The user asked about that name and it was taken; finding alternatives is the obvious next move.
 
@@ -272,7 +271,7 @@ Generate and check close variations of the base name:
 - Hyphenated: `{base-hyphenated}.com` — always flag hyphens: "(Note: hyphens generally hurt branding and memorability)"
 - Abbreviation: truncate to a recognizable short form
 
-Check each variation against `.com` and `.io` at minimum. Run up to 15 concurrent RDAP checks per batch (rdap.org rate-limits above ~15 concurrent requests).
+Check each variation against `.com` and `.io` at minimum. Run up to 10 concurrent RDAP checks per batch, with a 5-second `sleep` between batches (rdap.org rate-limits aggressively — 429 responses begin after ~20 rapid requests).
 
 ### Strategy 3: Synonym & Thesaurus Exploration
 
@@ -311,37 +310,33 @@ Always verify a ccTLD exists and accepts registrations before suggesting it.
 
 ### Track B Execution Template
 
-**Use `--max-time 5` (not 10) and set bash timeout to 180000ms (3 minutes).**
+**Use `--max-time 8` and set bash timeout to 300000ms (5 minutes). Batch ≤10 concurrent, `sleep 5` between batches.**
 
 ```bash
 TMPDIR=$(mktemp -d)
 
-# --- Strategy 2: Close variations ---
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/getbrainstorm.com   > "$TMPDIR/getbrainstorm.com"   &
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/trybrainstorm.com   > "$TMPDIR/trybrainstorm.com"   &
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/brainstormhq.com    > "$TMPDIR/brainstormhq.com"    &
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/brainstormlabs.com  > "$TMPDIR/brainstormlabs.com"  &
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/brainstormapp.com   > "$TMPDIR/brainstormapp.com"   &
+# --- Batch 1: Close variations + synonyms (10 max) ---
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/getbrainstorm.com   > "$TMPDIR/getbrainstorm.com"   &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/trybrainstorm.com   > "$TMPDIR/trybrainstorm.com"   &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/brainstormhq.com    > "$TMPDIR/brainstormhq.com"    &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/brainstormlabs.com  > "$TMPDIR/brainstormlabs.com"  &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/brainstormapp.com   > "$TMPDIR/brainstormapp.com"   &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/ideate.com          > "$TMPDIR/ideate.com"          &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/ideate.io           > "$TMPDIR/ideate.io"           &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/thinkstorm.com      > "$TMPDIR/thinkstorm.com"      &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/brainwave.io        > "$TMPDIR/brainwave.io"        &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/ideaforge.dev       > "$TMPDIR/ideaforge.dev"       &
+wait
+sleep 5
 
-# --- Strategy 3: Synonyms ---
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/ideate.com          > "$TMPDIR/ideate.com"          &
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/ideate.io           > "$TMPDIR/ideate.io"           &
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/thinkstorm.com      > "$TMPDIR/thinkstorm.com"      &
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/brainwave.io        > "$TMPDIR/brainwave.io"        &
-
-# --- Strategy 4: Creative reconstruction ---
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/ideaforge.dev       > "$TMPDIR/ideaforge.dev"       &
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/mindspark.ai        > "$TMPDIR/mindspark.ai"        &
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/neuronflow.com      > "$TMPDIR/neuronflow.com"      &
-
+# --- Batch 2: Creative + domain hacks (5 remaining) ---
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/mindspark.ai        > "$TMPDIR/mindspark.ai"        &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/neuronflow.com      > "$TMPDIR/neuronflow.com"      &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/brainstor.me        > "$TMPDIR/brainstor.me"        &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/brainstorm.is       > "$TMPDIR/brainstorm.is"       &
 wait
 
-# --- Strategy 5: Domain hacks (RDAP — same as other strategies) ---
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/brainstor.me  > "$TMPDIR/brainstor.me"  &
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/brainstorm.is > "$TMPDIR/brainstorm.is" &
-wait
-
-# Read all results (404 = available, 200 = taken, else = ❓ — apply DoH fallback per lookup-reference.md)
+# Read all results (404 = available, 200 = taken, 429 = rate limited, else = ❓ — apply DoH fallback per lookup-reference.md)
 # Cleanup
 rm -rf "$TMPDIR"
 ```
@@ -529,9 +524,9 @@ Mix techniques across categories. The goal is a genuinely diverse set — if wav
 
 Check ALL generated names in parallel using RDAP. This means **50–100+ checks per wave** — batch them to avoid overwhelming the system.
 
-**IMPORTANT — bash timeout:** Bulk checks can run 50–100+ curl requests across multiple batches. Always set the bash timeout to at least 3 minutes (180000ms). Use `--max-time 5` (not 10) per curl to keep batches fast.
+**IMPORTANT — bash timeout:** Bulk checks can run 50–100+ curl requests across multiple batches. Always set the bash timeout to at least 5 minutes (300000ms). Use `--max-time 8` per curl to allow time for rdap.org's redirect hop.
 
-**Batching strategy:** Run checks in groups of **15** concurrent processes max (rdap.org rate-limits above ~15). Wait for each batch to finish before starting the next.
+**Batching strategy:** Run checks in groups of **10** concurrent processes max, with a **5-second `sleep` between batches** (rdap.org returns 429 after ~20 rapid requests). Wait for each batch to finish before starting the next.
 
 For each name:
 - Standard dictionary names: check `.com` + 2–3 relevant alternatives (e.g., `.dev`, `.io`, `.ai`, `.app`, `.co`)
@@ -543,20 +538,28 @@ For each name:
 ```bash
 TMPDIR=$(mktemp -d)
 
-# Batch 1 (domains 1-25)
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/vexapp.com    > "$TMPDIR/vexapp.com"    &
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/vexapp.dev    > "$TMPDIR/vexapp.dev"    &
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/zolt.io       > "$TMPDIR/zolt.io"       &
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/zolt.dev      > "$TMPDIR/zolt.dev"      &
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/gath.er       > "$TMPDIR/gath.er"       &
-# ... (up to 30 total in this batch)
+# Batch 1 (domains 1-10)
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/vexapp.com    > "$TMPDIR/vexapp.com"    &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/vexapp.dev    > "$TMPDIR/vexapp.dev"    &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/zolt.io       > "$TMPDIR/zolt.io"       &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/zolt.dev      > "$TMPDIR/zolt.dev"      &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/gath.er       > "$TMPDIR/gath.er"       &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/lumora.com    > "$TMPDIR/lumora.com"    &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/lumora.io     > "$TMPDIR/lumora.io"     &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/codecraft.com > "$TMPDIR/codecraft.com" &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/codecraft.dev > "$TMPDIR/codecraft.dev" &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/novari.co     > "$TMPDIR/novari.co"     &
 wait
+sleep 5
 
-# Batch 2 (domains 26-50)
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/lumora.com    > "$TMPDIR/lumora.com"    &
-curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 https://rdap.org/domain/lumora.io     > "$TMPDIR/lumora.io"     &
-# ... (up to 30 total in this batch)
+# Batch 2 (domains 11-20)
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/zentrik.com   > "$TMPDIR/zentrik.com"   &
+curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/zentrik.io    > "$TMPDIR/zentrik.io"    &
+# ... (up to 10 total in this batch)
 wait
+sleep 5
+
+# Continue batching: ≤10 per batch, sleep 5 between each, until all names are checked
 
 # Read all results
 STATUS_VEXAPP_COM=$(cat "$TMPDIR/vexapp.com")
@@ -568,7 +571,7 @@ STATUS_ZOLT_IO=$(cat "$TMPDIR/zolt.io")
 rm -rf "$TMPDIR"
 ```
 
-Scale the number of batches to cover all checks. Always `wait` after each batch before starting the next.
+Scale the number of batches to cover all checks. Always `wait` + `sleep 5` after each batch before starting the next.
 
 ---
 
@@ -604,7 +607,7 @@ Format:
 12 of 34 checked are available. Anything catching your eye? Tell me what direction you like and I'll dig deeper.
 ```
 
-Use the correct registrar link for each domain per the routing table in Step 3d. The examples above happen to use name.com TLDs — for Dynadot/Namecheap TLDs, use those registrar URLs instead.
+Use the correct registrar link for each domain per the routing table in Step 3d. The examples above happen to use name.com TLDs — for Dynadot TLDs, use the Dynadot URL instead.
 
 Notable near-misses (show sparingly, only if genuinely worth mentioning):
 > codeship.com is taken, but codeship.dev is available ✅
@@ -843,4 +846,4 @@ Detailed lookup tables are in `references/` — consult them as needed:
 
 - **`references/lookup-reference.md`** — RDAP command and status codes, DoH fallback via curl, full fallback chain diagram, graceful degradation threshold and response format
 - **`references/tld-catalog.md`** — Thematic TLD pairings by project type (12 categories), domain hack catalog with 22 ccTLDs and curated examples
-- **`references/registrar-routing.md`** — TLD-to-registrar routing table. Determines whether buy links go to name.com, Dynadot, or Namecheap based on TLD. **Always consult this table when generating registration links.**
+- **`references/registrar-routing.md`** — TLD-to-registrar routing table. Determines whether buy links go to name.com or Dynadot based on TLD. **Always consult this table when generating registration links.**

@@ -33,7 +33,7 @@ Domain hacks break a word across the name and TLD so the whole thing reads as on
 - `.al` — **Non-registrable.** Specialty/regional registrars only.
 - `.st`, `.ly`, `.is`, `.to`, `.pt`, `.my` — **Route to Dynadot** (not on name.com).
 - `.gg` — **Routes to Dynadot** (not on name.com).
-- `.nu` — **Routes to Namecheap** (not on name.com).
+- `.nu` — **Routes to Dynadot** (not on name.com).
 - All others below are on name.com.
 
 ```
@@ -53,7 +53,7 @@ Domain hacks break a word across the name and TLD so the whole thing reads as on
 .re  →  sha.re,   ca.re,    compa.re, prepa.re                 → name.com
 .sh  →  cra.sh,   fre.sh,   pu.sh,    fla.sh                   → name.com
 .pt  →  scri.pt,  ada.pt,   acce.pt,  corrup.pt                → Dynadot
-.nu  →  me.nu,    reve.nu                                       → Namecheap
+.nu  →  me.nu,    reve.nu                                       → Dynadot
 .es  →  tim.es,   hous.es,  cours.es                           → name.com
 .no  →  casi.no                                                 → name.com
 .se  →  plea.se,  cour.se,  pur.se                             → name.com

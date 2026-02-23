@@ -34,17 +34,7 @@ Covers: .com, .dev, .io, .ai, .co, .app, .xyz, .me, .sh, .cc, .am, .at, .be, .re
 - **Search URL:** `https://www.dynadot.com/domain/search?domain={domain}`
 - **Link text:** `Register on Dynadot →` or `Check manually on Dynadot →`
 
-**Fallback TLDs:** `.st`, `.ly`, `.is`, `.to`, `.pt`, `.my`, `.gg`
-
----
-
-### Namecheap (Secondary fallback)
-
-- **Commission:** 20%
-- **Search URL:** `https://www.namecheap.com/domains/registration/results/?domain={domain}`
-- **Link text:** `Register on Namecheap →` or `Check manually on Namecheap →`
-
-**Fallback TLDs:** `.nu`
+**Fallback TLDs:** `.st`, `.ly`, `.is`, `.to`, `.pt`, `.my`, `.gg`, `.nu`
 
 ---
 
@@ -80,7 +70,7 @@ These TLDs are controlled by corporations and not open for public registration a
 | `.pt` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
 | `.my` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
 | `.gg` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
-| `.nu` | Namecheap | `https://www.namecheap.com/domains/registration/results/?domain={domain}` |
+| `.nu` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
 | `.er` | — | Non-registrable (specialty registrar only) |
 | `.al` | — | Non-registrable (specialty registrar only) |
 | Everything else | name.com | `https://www.name.com/domain/search/{domain}` |

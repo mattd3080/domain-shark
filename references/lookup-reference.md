@@ -17,9 +17,10 @@ curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 https://rdap.org/domain/
 Status codes:
 - `404` → Available (definitive)
 - `200` → Taken (definitive)
+- `429` → Rate limited — non-definitive, proceed to DoH fallback
 - `000` or anything else → Non-definitive — proceed to DoH fallback
 
-**Concurrency limit:** 15 parallel checks per batch (rdap.org rate-limits above ~15 concurrent requests from a single IP).
+**Concurrency limit:** 10 parallel checks per batch, with a 5-second `sleep` between batches. rdap.org returns 429 (Too Many Requests) after ~20 rapid requests from a single IP.
 
 ---
 
