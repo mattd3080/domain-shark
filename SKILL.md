@@ -1,8 +1,9 @@
 ---
 name: domain-shark
-description: Use when the user wants to check if a domain name is available, find a domain for a project or startup, brainstorm domain name ideas, see what TLDs are available for a name, check if a domain is taken, search the aftermarket for domains listed for sale, or get help naming a product or app. Activate automatically when the user mentions needing a domain, asks "is X.com available", or is trying to name something and needs domain options.
+description: This skill should be used when the user asks to "check if a domain is available", "find a domain name", "brainstorm domain names", "is X.com taken", "search for domains", or is trying to name a product, app, or startup and needs domain options. Also activate when the user mentions needing a domain or asks about aftermarket domains listed for sale.
 version: 1.0.0
-user-invocable: true
+allowed-tools: Bash
+metadata: {"openclaw": {"requires": {"bins": ["curl", "whois", "dig"]}, "homepage": "https://github.com/mattd3080/domain-shark"}}
 ---
 
 # Domain Shark
