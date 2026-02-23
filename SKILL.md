@@ -22,7 +22,7 @@ REMOTE_VERSION=$(curl -s --max-time 3 "https://raw.githubusercontent.com/mattd30
 echo "local=$LOCAL_VERSION remote=$REMOTE_VERSION"
 ```
 
-- If `REMOTE_VERSION` is empty or the curl fails: skip silently (no network, no problem).
+- If `REMOTE_VERSION` is empty or the curl fails: skip silently.
 - If `LOCAL_VERSION` equals `REMOTE_VERSION`: do nothing.
 - If they differ: after presenting the current results, append a one-liner at the bottom:
 
