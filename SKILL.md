@@ -1,7 +1,7 @@
 ---
 name: domain-shark
 description: This skill should be used when the user asks to "check if a domain is available", "find a domain name", "brainstorm domain names", "is X.com taken", "search for domains", or is trying to name a product, app, or startup and needs domain options. Also activate when the user mentions needing a domain or asks about aftermarket domains listed for sale.
-version: 1.2.0
+version: 1.3.0
 allowed-tools: Bash
 metadata: {"openclaw": {"requires": {"bins": ["curl"]}, "homepage": "https://github.com/mattd3080/domain-shark"}}
 ---
@@ -123,9 +123,38 @@ STATUS_CC=$(cat "${TMPFILE}.brainstorm.cc")
 rm -f "${TMPFILE}" "${TMPFILE}".*
 ```
 
-### 3c. Classify Each Result
+### 3c. Retry Non-Definitive Results
 
-For each domain checked, classify it as one of three states:
+After reading all results, check for any that returned something other than 200 or 404 (e.g., 000 timeout, 429 rate limit). If there are any, retry them:
+
+1. Wait 10 seconds (`sleep 10`)
+2. Re-run the failed domains in parallel (≤5 concurrent, `--max-time 10`)
+3. Read the new results — they replace the originals
+
+This retry pattern applies everywhere RDAP checks are used (Step 3, Track B, brainstorm). rdap.org rate-limits aggressively, but a short wait almost always clears it.
+
+```bash
+# After reading all STATUS_ variables above, retry any non-definitive results:
+# (Adapt this pattern — only retry domains where STATUS was not 200 or 404)
+
+RETRYFILE=$(mktemp)
+# For each non-definitive result, append the domain to RETRYFILE:
+# echo "brainstorm.xyz" >> "$RETRYFILE"
+
+if [ -s "$RETRYFILE" ]; then
+  sleep 10
+  while IFS= read -r D; do
+    curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 "https://rdap.org/domain/$D" > "${TMPFILE}.$D" &
+  done < "$RETRYFILE"
+  wait
+  # Re-read the retried results into their STATUS_ variables
+fi
+rm -f "$RETRYFILE"
+```
+
+### 3d. Classify Each Result
+
+For each domain checked (after retry), classify it as one of three states:
 
 | HTTP Status | Classification | Symbol |
 |-------------|---------------|--------|
@@ -133,7 +162,7 @@ For each domain checked, classify it as one of three states:
 | 200 | Taken | ❌ |
 | Anything else (000, 429, timeout, 5xx, etc.) | Couldn't check | ❓ |
 
-### 3d. Build the Affiliate Links
+### 3e. Build the Affiliate Links
 
 For each domain, determine the correct registrar using the routing table below, then generate the appropriate link.
 
@@ -192,7 +221,7 @@ Great news — {domain} is available!
 > Availability is checked in real-time but can change at any moment. Confirm at checkout before purchasing.
 ```
 
-Show all 10 TLDs grouped by status (Available first, then Taken, then Couldn't Check). Omit any group that has no entries. Highlight the primary domain (the one the user asked about) at the top as the featured result. Use the correct registrar link for each TLD per the routing table in Step 3d.
+Show all 10 TLDs grouped by status (Available first, then Taken, then Couldn't Check). Omit any group that has no entries. Highlight the primary domain (the one the user asked about) at the top as the featured result. Use the correct registrar link for each TLD per the routing table in Step 3e.
 
 ### If the user's primary domain is TAKEN:
 
@@ -310,7 +339,7 @@ Always verify a ccTLD exists and accepts registrations before suggesting it.
 
 ### Track B Execution Template
 
-**Use `--max-time 8` and set bash timeout to 300000ms (5 minutes). Batch ≤10 concurrent, `sleep 5` between batches.**
+**Use `--max-time 8` and set bash timeout to 300000ms (5 minutes). Batch ≤10 concurrent, `sleep 5` between batches. Retry failures after a 10-second wait.**
 
 ```bash
 TMPDIR=$(mktemp -d)
@@ -336,7 +365,24 @@ curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/b
 curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 https://rdap.org/domain/brainstorm.is       > "$TMPDIR/brainstorm.is"       &
 wait
 
-# Read all results (404 = available, 200 = taken, 429 = rate limited, else = ❓ — apply DoH fallback per lookup-reference.md)
+# --- Retry: collect non-definitive results, wait 10s, re-check ---
+RETRYFILE=$(mktemp)
+for F in "$TMPDIR"/*; do
+  D=$(basename "$F"); STATUS=$(cat "$F")
+  if [ "$STATUS" != "200" ] && [ "$STATUS" != "404" ]; then
+    echo "$D" >> "$RETRYFILE"
+  fi
+done
+if [ -s "$RETRYFILE" ]; then
+  sleep 10
+  while IFS= read -r D; do
+    curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 "https://rdap.org/domain/$D" > "$TMPDIR/$D" &
+  done < "$RETRYFILE"
+  wait
+fi
+rm -f "$RETRYFILE"
+
+# Read all results (404 = available, 200 = taken, else = ❓ — apply DoH fallback per lookup-reference.md)
 # Cleanup
 rm -rf "$TMPDIR"
 ```
@@ -414,7 +460,7 @@ I wasn't able to verify {domain} automatically (the RDAP lookup timed out or ret
 > Availability is checked in real-time but can change at any moment. Confirm at checkout before purchasing.
 ```
 
-Group results by status (Available first, then Taken, then Couldn't Check). Omit empty groups. Use the correct registrar link for each TLD per the routing table in Step 3d.
+Group results by status (Available first, then Taken, then Couldn't Check). Omit empty groups. Use the correct registrar link for each TLD per the routing table in Step 3e.
 
 ---
 
@@ -561,6 +607,28 @@ sleep 5
 
 # Continue batching: ≤10 per batch, sleep 5 between each, until all names are checked
 
+# --- Retry: collect non-definitive results, wait 10s, re-check in batches of 5 ---
+RETRYFILE=$(mktemp)
+for F in "$TMPDIR"/*; do
+  D=$(basename "$F"); STATUS=$(cat "$F")
+  if [ "$STATUS" != "200" ] && [ "$STATUS" != "404" ]; then
+    echo "$D" >> "$RETRYFILE"
+  fi
+done
+if [ -s "$RETRYFILE" ]; then
+  sleep 10
+  BATCH=0
+  while IFS= read -r D; do
+    curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 "https://rdap.org/domain/$D" > "$TMPDIR/$D" &
+    BATCH=$((BATCH+1))
+    if [ $BATCH -ge 5 ]; then
+      wait; sleep 3; BATCH=0
+    fi
+  done < "$RETRYFILE"
+  wait
+fi
+rm -f "$RETRYFILE"
+
 # Read all results
 STATUS_VEXAPP_COM=$(cat "$TMPDIR/vexapp.com")
 STATUS_VEXAPP_DEV=$(cat "$TMPDIR/vexapp.dev")
@@ -571,7 +639,7 @@ STATUS_ZOLT_IO=$(cat "$TMPDIR/zolt.io")
 rm -rf "$TMPDIR"
 ```
 
-Scale the number of batches to cover all checks. Always `wait` + `sleep 5` after each batch before starting the next.
+Scale the number of batches to cover all checks. Always `wait` + `sleep 5` after each batch before starting the next. The retry pass at the end catches any rate-limited or timed-out domains.
 
 ---
 
@@ -607,7 +675,7 @@ Format:
 12 of 34 checked are available. Anything catching your eye? Tell me what direction you like and I'll dig deeper.
 ```
 
-Use the correct registrar link for each domain per the routing table in Step 3d. The examples above happen to use name.com TLDs — for Dynadot TLDs, use the Dynadot URL instead.
+Use the correct registrar link for each domain per the routing table in Step 3e. The examples above happen to use name.com TLDs — for Dynadot TLDs, use the Dynadot URL instead.
 
 Notable near-misses (show sparingly, only if genuinely worth mentioning):
 > codeship.com is taken, but codeship.dev is available ✅
