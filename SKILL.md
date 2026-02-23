@@ -110,18 +110,30 @@ For each domain checked, classify it as one of three states:
 
 ### 3d. Build the Affiliate Links
 
-For each domain, use these link templates:
+For each domain, determine the correct registrar using the routing table below, then generate the appropriate link.
 
-- **Available domains** → name.com registration link:
-  `https://www.name.com/domain/search/{domain}`
-  Example: `https://www.name.com/domain/search/brainstorm.com`
+**Registrar routing table:**
 
-- **Taken domains** → Sedo aftermarket link:
+| TLD | Registrar | Search URL |
+|-----|-----------|------------|
+| `.st`, `.ly`, `.is`, `.to`, `.pt`, `.my`, `.gg` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
+| `.nu` | Namecheap | `https://www.namecheap.com/domains/registration/results/?domain={domain}` |
+| `.er`, `.al` | — | Non-registrable (see note below) |
+| Everything else | name.com | `https://www.name.com/domain/search/{domain}` |
+
+**Link rules:**
+
+- **Available domains** → Registration link using the correct registrar from the table above
+  Example (.com → name.com): `https://www.name.com/domain/search/brainstorm.com`
+  Example (.ly → Dynadot): `https://www.dynadot.com/domain/search?domain=brainstorm.ly`
+
+- **Taken domains** → Sedo aftermarket link (TLD-agnostic, always the same):
   `https://sedo.com/search/?keyword={domain}`
   Example: `https://sedo.com/search/?keyword=brainstorm.com`
 
-- **Couldn't check** → name.com search link (manual check):
-  `https://www.name.com/domain/search/{domain}`
+- **Couldn't check** → Manual check link using the correct registrar from the table above
+
+- **Non-registrable TLDs (.er, .al)** → If a domain hack using `.er` or `.al` shows as available, display it but replace the buy link with: "Registration requires a specialty registrar — search for '.er domain registration' for options."
 
 ---
 
@@ -136,7 +148,7 @@ For each domain, use these link templates:
 
 Great news — {domain} is available!
 
-[Register on name.com →](https://www.name.com/domain/search/{domain})
+[Register on {registrar} →]({registrar search URL for domain})
 
 ---
 
@@ -153,7 +165,7 @@ Great news — {domain} is available!
 > Availability is checked in real-time but can change at any moment. Confirm at checkout before purchasing.
 ```
 
-Show all 10 TLDs in the matrix, with appropriate status and link for each. Highlight the primary domain (the one the user asked about) at the top as the featured result.
+Show all 10 TLDs in the matrix, with appropriate status and link for each. Highlight the primary domain (the one the user asked about) at the top as the featured result. Use the correct registrar link for each TLD per the routing table in Step 3d.
 
 ### If the user's primary domain is TAKEN:
 
@@ -344,8 +356,8 @@ brainstorm.com is already registered.
 **Domain Hacks**
 | Domain | | |
 |--------|---|---|
-| brainstor.me  | ✅ Available | [Register →](https://www.name.com/domain/search/brainstor.me) |
-| brainstorm.is | ✅ Available | [Register →](https://www.name.com/domain/search/brainstorm.is) |
+| brainstor.me  | ✅ Available | [Register on name.com →](https://www.name.com/domain/search/brainstor.me) |
+| brainstorm.is | ✅ Available | [Register →](https://www.dynadot.com/domain/search?domain=brainstorm.is) |
 
 ---
 
@@ -361,7 +373,7 @@ Only show sections that have at least one available result. If a strategy yields
 
 I wasn't able to verify {domain} automatically (the RDAP lookup timed out or returned an unexpected result).
 
-[Check manually on name.com →](https://www.name.com/domain/search/{domain})
+[Check manually on {registrar} →]({registrar search URL for domain})
 
 ---
 
@@ -378,7 +390,7 @@ I wasn't able to verify {domain} automatically (the RDAP lookup timed out or ret
 > Availability is checked in real-time but can change at any moment. Confirm at checkout before purchasing.
 ```
 
-Show the same full 10-TLD matrix table as in the Available and Taken cases above, with the actual check results for each TLD.
+Show the same full 10-TLD matrix table as in the Available and Taken cases above, with the actual check results for each TLD. Use the correct registrar link for each TLD per the routing table in Step 3d.
 
 ---
 
@@ -547,7 +559,7 @@ Format:
 - novari.co ✅ → [Register on name.com →](https://www.name.com/domain/search/novari.co)
 
 **Domain Hacks**
-- gath.er ✅ → [Register on name.com →](https://www.name.com/domain/search/gath.er)
+- gath.er ✅ → *Registration requires a specialty registrar — search for '.er domain registration' for options.*
 - deli.sh ✅ → [Register on name.com →](https://www.name.com/domain/search/deli.sh)
 
 **Thematic TLD**
@@ -556,6 +568,8 @@ Format:
 
 12 of 34 checked are available. Anything catching your eye? Tell me what direction you like and I'll dig deeper.
 ```
+
+Use the correct registrar link for each domain per the routing table in Step 3d. The examples above happen to use name.com TLDs — for Dynadot/Namecheap TLDs, use those registrar URLs instead.
 
 Notable near-misses (show sparingly, only if genuinely worth mentioning):
 > codeship.com is taken, but codeship.dev is available ✅
@@ -659,7 +673,7 @@ After a successful premium check, classify and display the result using one of t
 
 > "This domain is available at premium pricing — registry premiums can range from hundreds to tens of thousands of dollars, and may carry higher annual renewal costs every year after purchase. Check the exact price before committing."
 >
-> [Check price on name.com →](https://www.name.com/domain/search/{domain})
+> [Check price on {registrar} →]({registrar search URL for domain})
 
 Also add: "Note: unlike aftermarket domains, registry premiums often have ongoing premium renewal costs. The elevated price doesn't go away after you buy it."
 
@@ -794,3 +808,4 @@ Detailed lookup tables are in `references/` — consult them as needed:
 
 - **`references/lookup-reference.md`** — RDAP command and status codes, DoH fallback via curl, full fallback chain diagram, graceful degradation threshold and response format
 - **`references/tld-catalog.md`** — Thematic TLD pairings by project type (12 categories), domain hack catalog with 22 ccTLDs and curated examples
+- **`references/registrar-routing.md`** — TLD-to-registrar routing table. Determines whether buy links go to name.com, Dynadot, or Namecheap based on TLD. **Always consult this table when generating registration links.**

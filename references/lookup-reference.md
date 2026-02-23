@@ -65,6 +65,7 @@ Trigger: 3+ timeouts (HTTP 000) in the same batch across different registries.
 I'm having trouble checking availability right now. Here are my suggestions — check them manually:
 
 - brainstorm.dev → [Check on name.com →](https://www.name.com/domain/search/brainstorm.dev)
+- brainstorm.ly → [Check on Dynadot →](https://www.dynadot.com/domain/search?domain=brainstorm.ly)
 
 Want me to retry?
 ```
