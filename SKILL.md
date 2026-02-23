@@ -154,13 +154,11 @@ Great news — {domain} is available!
 
 ### Full TLD Matrix
 
-| Domain | Status | |
-|--------|--------|---|
-| {base}.com | ✅ Available | [Register →](https://www.name.com/domain/search/{base}.com) |
-| {base}.dev | ❌ Taken | [Aftermarket →](https://sedo.com/search/?keyword={base}.dev) |
-| {base}.io  | ✅ Available | [Register →](https://www.name.com/domain/search/{base}.io) |
-| {base}.ai  | ❓ Couldn't check | [Check manually →](https://www.name.com/domain/search/{base}.ai) |
-| ... | ... | ... |
+- {base}.com ✅ → [Register →](https://www.name.com/domain/search/{base}.com)
+- {base}.dev ❌ Taken → [Aftermarket →](https://sedo.com/search/?keyword={base}.dev)
+- {base}.io ✅ → [Register →](https://www.name.com/domain/search/{base}.io)
+- {base}.ai ❓ → [Check manually →](https://www.name.com/domain/search/{base}.ai)
+- ...
 
 > Availability is checked in real-time but can change at any moment. Confirm at checkout before purchasing.
 ```
@@ -194,12 +192,10 @@ When the primary domain is taken:
 
 ### Other TLDs
 
-| Domain | Status | |
-|--------|--------|---|
-| {base}.com | ❌ Taken | [Aftermarket →](https://sedo.com/search/?keyword={base}.com) |
-| {base}.dev | ✅ Available | [Register →](https://www.name.com/domain/search/{base}.dev) |
-| {base}.io  | ✅ Available | [Register →](https://www.name.com/domain/search/{base}.io) |
-| ... | ... | ... |
+- {base}.com ❌ Taken → [Aftermarket →](https://sedo.com/search/?keyword={base}.com)
+- {base}.dev ✅ → [Register →](https://www.name.com/domain/search/{base}.dev)
+- {base}.io ✅ → [Register →](https://www.name.com/domain/search/{base}.io)
+- ...
 
 > Availability is checked in real-time but can change at any moment. Confirm at checkout before purchasing.
 ```
@@ -329,35 +325,25 @@ brainstorm.com is already registered.
 ## Available Alternatives
 
 **Same Name, Different TLD**
-| Domain | | |
-|--------|---|---|
-| brainstorm.dev | ✅ Available | [Register →](https://www.name.com/domain/search/brainstorm.dev) |
-| brainstorm.ai  | ✅ Available | [Register →](https://www.name.com/domain/search/brainstorm.ai) |
+- brainstorm.dev ✅ → [Register →](https://www.name.com/domain/search/brainstorm.dev)
+- brainstorm.ai ✅ → [Register →](https://www.name.com/domain/search/brainstorm.ai)
 
 **Close Variations**
-| Domain | | |
-|--------|---|---|
-| getbrainstorm.com  | ✅ Available | [Register →](https://www.name.com/domain/search/getbrainstorm.com) |
-| brainstormhq.com   | ✅ Available | [Register →](https://www.name.com/domain/search/brainstormhq.com) |
-| brainstorm-app.com | ✅ Available | [Register →](https://www.name.com/domain/search/brainstorm-app.com) *(hyphens hurt branding)* |
+- getbrainstorm.com ✅ → [Register →](https://www.name.com/domain/search/getbrainstorm.com)
+- brainstormhq.com ✅ → [Register →](https://www.name.com/domain/search/brainstormhq.com)
+- brainstorm-app.com ✅ → [Register →](https://www.name.com/domain/search/brainstorm-app.com) *(hyphens hurt branding)*
 
 **Synonym Alternatives**
-| Domain | | |
-|--------|---|---|
-| ideate.io     | ✅ Available | [Register →](https://www.name.com/domain/search/ideate.io) |
-| thinkstorm.com | ✅ Available | [Register →](https://www.name.com/domain/search/thinkstorm.com) |
+- ideate.io ✅ → [Register →](https://www.name.com/domain/search/ideate.io)
+- thinkstorm.com ✅ → [Register →](https://www.name.com/domain/search/thinkstorm.com)
 
 **Creative Alternatives**
-| Domain | | |
-|--------|---|---|
-| ideaforge.dev  | ✅ Available | [Register →](https://www.name.com/domain/search/ideaforge.dev) |
-| mindspark.ai   | ✅ Available | [Register →](https://www.name.com/domain/search/mindspark.ai) |
+- ideaforge.dev ✅ → [Register →](https://www.name.com/domain/search/ideaforge.dev)
+- mindspark.ai ✅ → [Register →](https://www.name.com/domain/search/mindspark.ai)
 
 **Domain Hacks**
-| Domain | | |
-|--------|---|---|
-| brainstor.me  | ✅ Available | [Register on name.com →](https://www.name.com/domain/search/brainstor.me) |
-| brainstorm.is | ✅ Available | [Register →](https://www.dynadot.com/domain/search?domain=brainstorm.is) |
+- brainstor.me ✅ → [Register →](https://www.name.com/domain/search/brainstor.me)
+- brainstorm.is ✅ → [Register →](https://www.dynadot.com/domain/search?domain=brainstorm.is)
 
 ---
 
@@ -379,18 +365,16 @@ I wasn't able to verify {domain} automatically (the RDAP lookup timed out or ret
 
 ### Other TLDs
 
-| Domain | Status | |
-|--------|--------|---|
-| {base}.com | ✅ Available | [Register →](https://www.name.com/domain/search/{base}.com) |
-| {base}.dev | ❌ Taken | [Aftermarket →](https://sedo.com/search/?keyword={base}.dev) |
-| {base}.io  | ✅ Available | [Register →](https://www.name.com/domain/search/{base}.io) |
-| {base}.ai  | ❓ Couldn't check | [Check manually →](https://www.name.com/domain/search/{base}.ai) |
-| ... | ... | ... |
+- {base}.com ✅ → [Register →](https://www.name.com/domain/search/{base}.com)
+- {base}.dev ❌ Taken → [Aftermarket →](https://sedo.com/search/?keyword={base}.dev)
+- {base}.io ✅ → [Register →](https://www.name.com/domain/search/{base}.io)
+- {base}.ai ❓ → [Check manually →](https://www.name.com/domain/search/{base}.ai)
+- ...
 
 > Availability is checked in real-time but can change at any moment. Confirm at checkout before purchasing.
 ```
 
-Show the same full 10-TLD matrix table as in the Available and Taken cases above, with the actual check results for each TLD. Use the correct registrar link for each TLD per the routing table in Step 3d.
+Show the same full 10-TLD list as in the Available and Taken cases above, with the actual check results for each TLD. Use the correct registrar link for each TLD per the routing table in Step 3d.
 
 ---
 
