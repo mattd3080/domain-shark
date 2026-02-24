@@ -31,16 +31,15 @@ Domain hacks break a word across the name and TLD so the whole thing reads as on
 
 - `.er` — **Non-registrable.** No major registrar supports open registration. Still suggest hacks for inspiration but flag the limitation.
 - `.al` — **Non-registrable.** Specialty/regional registrars only.
-- `.st`, `.ly`, `.is`, `.to`, `.pt`, `.my` — **Route to Dynadot** (not on name.com).
+- `.st`, `.to`, `.pt`, `.my` — **Route to Dynadot** (not on name.com).
 - `.gg` — **Routes to Dynadot** (not on name.com).
-- `.nu` — **Routes to Dynadot** (not on name.com).
 - All others below are on name.com.
 
 ```
 .er  →  gath.er,  brew.er,  hack.er,  mak.er,   serv.er       ⚠️ non-registrable
 .st  →  playli.st, fir.st,  fa.st,    la.st,    be.st          → Dynadot
-.ly  →  quick.ly, friend.ly, love.ly, direct.ly, short.ly      → Dynadot
-.is  →  th.is,    what.is,  name.is,  this.is                  → Dynadot
+.ly  →  quick.ly, friend.ly, love.ly, direct.ly, short.ly      → name.com
+.is  →  th.is,    what.is,  name.is,  this.is                  → name.com
 .it  →  do.it,    build.it, ship.it,  edit.it                  → name.com
 .me  →  hire.me,  find.me,  build.me, read.me,  learn.me       → name.com
 .io  →  portfol.io, stud.io, rat.io,  rad.io,   televis.io     → name.com
@@ -53,7 +52,7 @@ Domain hacks break a word across the name and TLD so the whole thing reads as on
 .re  →  sha.re,   ca.re,    compa.re, prepa.re                 → name.com
 .sh  →  cra.sh,   fre.sh,   pu.sh,    fla.sh                   → name.com
 .pt  →  scri.pt,  ada.pt,   acce.pt,  corrup.pt                → Dynadot
-.nu  →  me.nu,    reve.nu                                       → Dynadot
+.nu  →  me.nu,    reve.nu                                       → name.com
 .es  →  tim.es,   hous.es,  cours.es                           → name.com
 .no  →  casi.no                                                 → name.com
 .se  →  plea.se,  cour.se,  pur.se                             → name.com
