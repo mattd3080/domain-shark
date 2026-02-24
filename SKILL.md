@@ -182,7 +182,7 @@ For each domain, determine the correct registrar using the routing table below, 
 
 | TLD | Registrar | Search URL |
 |-----|-----------|------------|
-| `.st`, `.ly`, `.is`, `.to`, `.pt`, `.my`, `.gg`, `.nu` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
+| `.st`, `.to`, `.pt`, `.my`, `.gg` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
 | `.er`, `.al` | — | Non-registrable (see note below) |
 | Everything else | name.com | `https://www.name.com/domain/search/{domain}` |
 
@@ -190,7 +190,7 @@ For each domain, determine the correct registrar using the routing table below, 
 
 - **Available domains** → Registration link using the correct registrar from the table above
   Example (.com → name.com): `https://www.name.com/domain/search/brainstorm.com`
-  Example (.ly → Dynadot): `https://www.dynadot.com/domain/search?domain=brainstorm.ly`
+  Example (.to → Dynadot): `https://www.dynadot.com/domain/search?domain=brainstorm.to`
 
 - **Taken domains** → Sedo aftermarket link (TLD-agnostic, always the same):
   `https://sedo.com/search/?keyword={domain}`
@@ -455,7 +455,7 @@ You can purchase any of these domains via the URLs below. Want me to open one in
 **Domain Hacks**
 
 ✅ brainstor.me — [Register →](https://www.name.com/domain/search/brainstor.me)
-✅ brainstorm.is — [Register →](https://www.dynadot.com/domain/search?domain=brainstorm.is)
+✅ brainstorm.is — [Register →](https://www.name.com/domain/search/brainstorm.is)
 
 ---
 

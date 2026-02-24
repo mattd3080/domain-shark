@@ -24,7 +24,7 @@ name.com doesn't support all TLDs. When a domain uses a TLD that name.com can't 
 - **Search URL:** `https://www.name.com/domain/search/{domain}`
 - **Link text:** `Register on name.com →` or `Check manually on name.com →`
 
-Covers: .com, .dev, .io, .ai, .co, .app, .xyz, .me, .sh, .cc, .am, .at, .be, .re, .es, .no, .se, .de, .in, .it, and all thematic gTLDs (.tools, .codes, .build, .run, .studio, .design, .art, .gallery, .ink, .media, .chat, .coffee, .cafe, .menu, .game, .quest, .lol, .ventures, .supply, .agency, .inc, .capital, .community, .social, .club, .group, .team, .shop, .store, .market, .deals, .academy, .school, .courses, .training, .health, .care, .clinic, .fit, .music, .band, .audio, .fm, .money, .finance, .fund, .tax, .investments).
+Covers: .com, .dev, .io, .ai, .co, .app, .xyz, .me, .sh, .cc, .am, .at, .be, .re, .es, .no, .se, .de, .in, .it, .ly, .is, .nu, and all thematic gTLDs (.tools, .codes, .build, .run, .studio, .design, .art, .gallery, .ink, .media, .chat, .coffee, .cafe, .menu, .game, .quest, .lol, .ventures, .supply, .agency, .inc, .capital, .community, .social, .club, .group, .team, .shop, .store, .market, .deals, .academy, .school, .courses, .training, .health, .care, .clinic, .fit, .music, .band, .audio, .fm, .money, .finance, .fund, .tax, .investments).
 
 ---
 
@@ -34,7 +34,7 @@ Covers: .com, .dev, .io, .ai, .co, .app, .xyz, .me, .sh, .cc, .am, .at, .be, .re
 - **Search URL:** `https://www.dynadot.com/domain/search?domain={domain}`
 - **Link text:** `Register on Dynadot →` or `Check manually on Dynadot →`
 
-**Fallback TLDs:** `.st`, `.ly`, `.is`, `.to`, `.pt`, `.my`, `.gg`, `.nu`
+**Fallback TLDs:** `.st`, `.to`, `.pt`, `.my`, `.gg`
 
 ---
 
@@ -64,13 +64,13 @@ These TLDs are controlled by corporations and not open for public registration a
 | TLD | Registrar | Search URL |
 |-----|-----------|------------|
 | `.st` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
-| `.ly` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
-| `.is` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
 | `.to` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
 | `.pt` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
 | `.my` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
 | `.gg` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
-| `.nu` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
+| `.ly` | name.com | `https://www.name.com/domain/search/{domain}` |
+| `.is` | name.com | `https://www.name.com/domain/search/{domain}` |
+| `.nu` | name.com | `https://www.name.com/domain/search/{domain}` |
 | `.er` | — | Non-registrable (specialty registrar only) |
 | `.al` | — | Non-registrable (specialty registrar only) |
 | Everything else | name.com | `https://www.name.com/domain/search/{domain}` |
