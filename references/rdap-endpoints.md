@@ -141,7 +141,7 @@ No RDAP available. Routed through the worker's WHOIS proxy.
 
 ## The `rdap_url()` Canonical Function
 
-Copy this function **verbatim** into all 4 SKILL.md templates. Do not modify the URL patterns or case labels without also updating this file.
+Copy this function **verbatim** into all 3 SKILL.md templates (Step 3b, Track B, Step 7d). Do not modify the URL patterns or case labels without also updating this file.
 
 ```bash
 rdap_url() {
@@ -208,4 +208,4 @@ When adding a new TLD:
 1. **Check IANA bootstrap first** — `https://data.iana.org/rdap/dns.json` — if the TLD is listed, use that URL.
 2. **Not in IANA bootstrap?** Check if Identity Digital serves it (`rdap.identitydigital.services`). Mark it ⚠️ unofficial if so.
 3. **No RDAP at all?** Add to the WHOIS proxy whitelist in the worker and add a `WHOIS` case to `rdap_url()`.
-4. Update this file, `tld-catalog.md`, and all 4 SKILL.md templates in sync.
+4. Update this file, `tld-catalog.md`, and all 3 SKILL.md templates (Step 3b, Track B, Step 7d) in sync.

@@ -35,7 +35,11 @@ Install command: `npx skills add mattd3080/domain-puppy`
 ## Worker
 
 The Cloudflare Worker is deployed at:
-`https://domain-puppy-proxy.mattjdalley.workers.dev/v1/premium-check`
+`https://domain-puppy-proxy.mattjdalley.workers.dev`
+
+Endpoints:
+- `POST /v1/premium-check` — Premium domain status via Fastly/Domainr (IP-quota limited)
+- `POST /v1/whois-check` — WHOIS availability for 13 ccTLDs without RDAP
 
 Secrets live in Cloudflare (never in files):
 - `FASTLY_API_TOKEN` — set via `wrangler secret put FASTLY_API_TOKEN`

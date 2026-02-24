@@ -89,7 +89,7 @@ Check the single domain determined in Step 3a. The following is a template using
 ```bash
 TMPFILE=$(mktemp)
 
-# --- Domain availability routing (v1.4.0) ---
+# --- Domain availability routing (v1.4.1) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -149,13 +149,20 @@ check_domain "brainstorm.com" "$TMPFILE"
 # Read the result
 STATUS=$(cat "$TMPFILE")
 
+# Retry once if non-definitive (000 timeout, 429 rate limit, etc.)
+if [ "$STATUS" != "200" ] && [ "$STATUS" != "404" ]; then
+  sleep 10
+  check_domain "brainstorm.com" "$TMPFILE"
+  STATUS=$(cat "$TMPFILE")
+fi
+
 # Cleanup
 rm -f "$TMPFILE"
 ```
 
 ### 3c. Retry Non-Definitive Results
 
-If the result was not 200 or 404 (e.g., 000 timeout, 429 rate limit), wait 10 seconds and retry once. Some registries rate-limit after rapid requests, but a short wait almost always clears it. If the retry also fails, classify as "couldn't check."
+The retry is built into the template above — if the first check returns anything other than 200 or 404, it waits 10 seconds and retries once. If the retry also fails, classify as "couldn't check."
 
 ### 3d. Classify Each Result
 
@@ -204,14 +211,12 @@ Present the single domain result. Use the correct registrar link per the routing
 ```
 ## {domain} ✅ Available!
 
-Great news — {domain} is available!
-
-[Register on {registrar} →]({registrar search URL for domain})
-
-> Availability is checked in real-time but can change at any moment. Confirm at checkout before purchasing.
+Great news — {domain} is available! I'll open up a page in your browser where you can get it.
 ```
 
-That's it — no TLD matrix. Show the result and the registration link.
+Then immediately run `open "{registrar search URL for domain}"` to open the registration page in the user's default browser. No need to ask — just open it.
+
+That's it — no TLD matrix. Show the result and open the link.
 
 **Registry Premium Proactive Warning:** Flag likely premium candidates based on these signals:
 - Single dictionary word on a popular TLD (`.com`, `.io`, `.ai`)
@@ -248,18 +253,20 @@ Wait for the user to choose before taking any action. Do NOT auto-run Track B or
 ```
 ## {domain} ❓ Couldn't Check
 
-I wasn't able to verify {domain} automatically (the RDAP lookup timed out or returned an unexpected result).
+I wasn't able to verify {domain} automatically (the RDAP lookup timed out or returned an unexpected result). You can check it directly here:
 
-[Check manually on {registrar} →]({registrar search URL for domain})
+[Check on {registrar} →]({registrar search URL for domain})
+
+Want me to open that in your browser?
 ```
 
-No TLD matrix. Show the single result with a manual check link.
+Do NOT auto-open the browser for inconclusive results — the user may not want a tab opened for a failed lookup. Wait for them to say yes.
 
 ---
 
 ## Step 4b: Track B — Alternative Domains
 
-Run Track B only when the user explicitly requests alternatives (e.g., chooses "Brainstorm alternatives" from the options menu in Step 4). Generate and check alternatives using the 4 strategies below. Run all RDAP checks in parallel (using the fallback chain from the Lookup Reference section for ccTLDs). Present only available domains, grouped by strategy.
+Run Track B only when the user explicitly requests alternatives (e.g., chooses "Brainstorm alternatives" from the options menu in Step 4). Generate and check alternatives using the 4 strategies below. Run all RDAP checks in parallel (using the fallback chain from `references/lookup-reference.md` for ccTLDs). Present only available domains, grouped by strategy.
 
 **IMPORTANT — Track B bash timeout:** Track B checks can run 30–50+ curl requests. Always set the bash timeout to at least 5 minutes (300000ms) for Track B commands. Use `--max-time 8` per curl to allow time for registry responses and WHOIS proxy lookups.
 
@@ -304,7 +311,7 @@ Check `.com` + 1–2 relevant TLDs for each.
 
 ### Strategy 4: Domain Hacks
 
-Generate domain hacks where the TLD completes the name or phrase. Use real ccTLDs (see the Domain Hack Catalog in the Lookup Reference section). Check each using the full fallback chain (RDAP → DoH) since many ccTLDs don't support RDAP.
+Generate domain hacks where the TLD completes the name or phrase. Use real ccTLDs (see the Domain Hack Catalog in `references/tld-catalog.md`). Check each using the full fallback chain (RDAP → DoH) since many ccTLDs don't support RDAP.
 
 Examples for "brainstorm":
 - `brainstor.me` (`.me`)
@@ -320,7 +327,7 @@ Always verify a ccTLD exists and accepts registrations before suggesting it.
 ```bash
 TMPDIR=$(mktemp -d)
 
-# --- Domain availability routing (v1.4.0) ---
+# --- Domain availability routing (v1.4.1) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -427,6 +434,8 @@ rm -rf "$TMPDIR"
 ```
 ## Available Alternatives for brainstorm
 
+You can purchase any of these domains via the URLs below. Want me to open one in your browser? Just let me know your favorite.
+
 **Close Variations**
 
 ✅ getbrainstorm.com — [Register →](https://www.name.com/domain/search/getbrainstorm.com)
@@ -455,6 +464,8 @@ Checked 45 domains — 11 are available. Want to explore any of these directions
 
 Only show sections that have at least one available result. If a strategy yields nothing available, omit that section entirely. Omit the count line if all strategies came up empty.
 
+When the user picks a domain from the list, run `open "{registrar search URL for domain}"` to open the registration page in their browser.
+
 ---
 
 ## Step 4c: TLD Scan (opt-in)
@@ -470,14 +481,20 @@ After retry (same retry logic as Step 3c, applied per-domain), present results g
 
 ### Available
 
+You can purchase any of these via the URLs below. Want me to open one in your browser? Just let me know which one.
+
 ✅ {base}.dev — [Register →](https://www.name.com/domain/search/{base}.dev)
 ✅ {base}.io — [Register →](https://www.name.com/domain/search/{base}.io)
 
 ### Taken
 
+Already registered, but you can see if the owner is selling:
+
 ❌ {base}.ai — [Aftermarket →](https://sedo.com/search/?keyword={base}.ai)
 
 ### Couldn't Check
+
+I couldn't verify these automatically — you can check them yourself:
 
 ❓ {base}.co — [Check manually →](https://www.name.com/domain/search/{base}.co)
 
@@ -485,6 +502,8 @@ After retry (same retry logic as Step 3c, applied per-domain), present results g
 ```
 
 Group by Available first, then Taken, then Couldn't Check. Omit any group that has no entries. Use the correct registrar link for each TLD per the routing table in Step 3e.
+
+When the user picks a domain from the list, run `open "{registrar search URL for domain}"` to open the registration page in their browser.
 
 ---
 
@@ -498,9 +517,9 @@ Place it at the bottom of the results table. Do not repeat it in subsequent chec
 
 ---
 
-## Step 6: After Presenting Results
+## Step 6: After Presenting Results (Flow 1 only)
 
-After showing results, offer one natural follow-up:
+After showing Flow 1 results (single domain check, TLD scan, or Track B), offer one natural follow-up. Do not apply this step after brainstorm waves — Step 7f handles brainstorm follow-ups separately.
 
 - If the domain was **available**: "Want me to check any other TLDs or variations?"
 - If the domain was **taken**: already handled by the options menu in Step 4.
@@ -512,9 +531,10 @@ Keep it to one short line. Don't over-explain.
 
 ## General Behavior Notes
 
+- **Opening links in the browser:** Use `open "url"` (macOS) to open registration/purchase pages in the user's default browser. For **single-domain results** (one domain checked and it's available, or a premium/aftermarket result), open the link automatically — tell the user you're doing it and just do it. For **multi-domain results** (Track B, TLD scan, brainstorm waves), list the results and ask which one they'd like opened. **NEVER open multiple browser tabs at once** unless the user explicitly asks you to (e.g., "open all of them"). One tab at a time, always.
 - Be conversational and direct. Don't narrate what you're doing step-by-step ("Now I will run the curl commands..."). Just do it and present the results cleanly.
 - Use markdown formatting for results — tables, headers, and links render well in Claude Code.
-- If the user provides multiple domain names at once, check them all. Run all RDAP lookups in a single parallel batch (all background processes, one `wait`).
+- If the user provides multiple domain names at once, check them all. Run all RDAP lookups in a single parallel batch (all background processes, one `wait`). Present results using the TLD Scan format from Step 4c (grouped by Available / Taken / Couldn't Check). Follow the multi-domain link-opening rule: list all results and ask which one they'd like opened in their browser.
 - Lowercase all domains before checking. RDAP is case-insensitive but keep output lowercase for consistency.
 - If the user provides a domain with an unusual TLD (e.g., brainstorm.gg), check that specific domain only.
 - Do not hallucinate availability. Always check via `curl` before reporting status. If a check fails, report ❓ honestly.
@@ -600,7 +620,7 @@ Check ALL generated names in parallel using RDAP. This means **50–100+ checks 
 
 For each name:
 - Standard dictionary names: check `.com` + 2–3 relevant alternatives (e.g., `.dev`, `.io`, `.ai`, `.app`, `.co`)
-- Domain hacks: check only the specific TLD that completes the hack (e.g., `gath.er` checks `.er`) — use the full fallback chain (RDAP → DoH) since many ccTLDs don't support RDAP. See the Lookup Reference section for fallback details.
+- Domain hacks: check only the specific TLD that completes the hack (e.g., `brainstor.me` checks `.me`) — use the full fallback chain (RDAP → DoH) since many ccTLDs don't support RDAP. See `references/lookup-reference.md` for fallback details. **Exception:** `.er` and `.al` are non-registrable — do NOT pass them to `check_domain()`. Instead, add them directly to the output with the specialty registrar disclaimer (see Step 3e).
 - Thematic TLD plays: check the exact TLD in the name — use the fallback chain for any ccTLD
 
 **Batch template (adapt for actual names):**
@@ -608,7 +628,7 @@ For each name:
 ```bash
 TMPDIR=$(mktemp -d)
 
-# --- Domain availability routing (v1.4.0) ---
+# --- Domain availability routing (v1.4.1) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -729,6 +749,8 @@ Format:
 
 ```
 ## Wave 1 — Available Domains
+
+You can purchase any of these domains via the URLs below. Want me to open one in your browser? Just tell me your favorite.
 
 **Short & Punchy**
 
@@ -853,17 +875,17 @@ After a successful premium check, classify and display the result using one of t
 
 **Registry Premium (domain is available but at elevated price):**
 
-> "This domain is available at premium pricing — registry premiums can range from hundreds to tens of thousands of dollars, and may carry higher annual renewal costs every year after purchase. Check the exact price before committing."
->
-> [Check price on {registrar} →]({registrar search URL for domain})
+> "This domain is available at premium pricing — registry premiums can range from hundreds to tens of thousands of dollars, and may carry higher annual renewal costs every year after purchase. I'll open the registrar page in your browser so you can see the exact price."
+
+Then immediately run `open "{registrar search URL for domain}"` to open the pricing page.
 
 Also add: "Note: unlike aftermarket domains, registry premiums often have ongoing premium renewal costs. The elevated price doesn't go away after you buy it."
 
 **Aftermarket / For Sale (domain is registered but listed for sale by owner):**
 
-> "This domain is owned but currently listed for sale on the aftermarket."
->
-> [Check price on Sedo →](https://sedo.com/search/?keyword={domain})
+> "This domain is owned but currently listed for sale on the aftermarket. I'll open the listing in your browser so you can see the price."
+
+Then immediately run `open "https://sedo.com/search/?keyword={domain}"` to open the aftermarket listing.
 
 Also add: "Aftermarket domains revert to standard renewal pricing once you own them — no ongoing premium."
 

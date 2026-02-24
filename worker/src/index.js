@@ -142,7 +142,7 @@ function getClientIP(request) {
 // ---------------------------------------------------------------------------
 
 /**
- * Reads the current quota for a client IP from KV.
+ * Checks the quota for a client IP without incrementing.
  *
  * KV key: ip:{clientIP}:{YYYY-MM}
  * KV value: { "checksUsed": N }
@@ -171,8 +171,8 @@ async function checkQuota(env, clientIP, freeChecksPerIP) {
 
 /**
  * Increments the quota counter for a client IP in KV.
+ * Called only AFTER a successful API response to avoid charging for failures.
  * TTL: 60 days (5184000 seconds).
- * Silently swallows KV errors to avoid breaking the response path.
  */
 async function incrementQuota(env, clientIP, checksUsed) {
   if (!env.QUOTA_KV) return;
@@ -182,7 +182,7 @@ async function incrementQuota(env, clientIP, checksUsed) {
     const newValue = JSON.stringify({ checksUsed: checksUsed + 1 });
     await env.QUOTA_KV.put(key, newValue, { expirationTtl: 5184000 });
   } catch {
-    // KV write failure — non-fatal, request already succeeded
+    // KV write failure — non-fatal
   }
 }
 
@@ -497,7 +497,7 @@ async function handlePremiumCheck(request, env) {
   }
 
   // --- IP quota check ---
-  const { allowed, checksUsed, remaining } = await checkQuota(env, clientIP, freeChecksPerIP);
+  const { allowed, checksUsed } = await checkQuota(env, clientIP, freeChecksPerIP);
   if (!allowed) {
     return jsonResponse({ error: 'quota_exceeded', remainingChecks: 0 }, 429);
   }
@@ -571,16 +571,17 @@ async function handlePremiumCheck(request, env) {
   // Map status — domain name is used only for matching, never logged
   const status = parseDomainrResponse(domainrData, domain);
 
-  // API call succeeded — increment quota and global monthly counter
+  // API call succeeded — increment both IP quota and global monthly counter
   await Promise.all([
     incrementQuota(env, clientIP, checksUsed),
     incrementMonthlyCount(env, monthlyQuotaLimit),
   ]);
 
+  const remainingChecks = Math.max(0, freeChecksPerIP - (checksUsed + 1));
+
   return jsonResponse({
     status,
-    data: domainrData,
-    remainingChecks: Math.max(0, freeChecksPerIP - (checksUsed + 1)),
+    remainingChecks,
   });
 }
 
