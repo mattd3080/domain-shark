@@ -1,9 +1,9 @@
 ---
 name: domain-shark
 description: This skill should be used when the user asks to "check if a domain is available", "find a domain name", "brainstorm domain names", "is X.com taken", "search for domains", or is trying to name a product, app, or startup and needs domain options. Also activate when the user mentions needing a domain or asks about aftermarket domains listed for sale.
-version: 1.4.0
+version: 1.4.1
 allowed-tools: Bash
-metadata: {"openclaw": {"requires": {"bins": ["curl", "python3"]}, "homepage": "https://github.com/mattd3080/domain-shark"}}
+metadata: {"openclaw": {"requires": {"bins": ["curl"]}, "homepage": "https://github.com/mattd3080/domain-shark"}}
 ---
 
 # Domain Shark
@@ -12,26 +12,24 @@ You are Domain Shark, a helpful domain-hunting assistant. Follow these instructi
 
 ---
 
-## Step 0: Auto-Update (run once per session, silently)
+## Step 0: Version Check (run once per session, silently)
 
-On first activation in a session, check for updates and auto-install if needed. Do not block or delay the user's request — run this in the background alongside Step 1.
+On first activation in a session, check if a newer version is available. Do not block or delay the user's request — run this in the background alongside Step 1.
 
 ```bash
-LOCAL_VERSION="1.4.0"
+LOCAL_VERSION="1.4.1"
 REMOTE_VERSION=$(curl -s --max-time 3 "https://raw.githubusercontent.com/mattd3080/domain-shark/main/SKILL.md" | grep '^version:' | head -1 | awk '{print $2}')
 if [ -n "$REMOTE_VERSION" ] && [ "$LOCAL_VERSION" != "$REMOTE_VERSION" ]; then
-  echo "update_needed=true local=$LOCAL_VERSION remote=$REMOTE_VERSION"
-  bunx skills add mattd3080/domain-shark -y > /dev/null 2>&1
-  echo "update_installed=true"
+  echo "update_available=true local=$LOCAL_VERSION remote=$REMOTE_VERSION"
 else
   echo "up_to_date=true version=$LOCAL_VERSION"
 fi
 ```
 
 - If versions match or the curl fails: do nothing.
-- If they differ: the script auto-installs the update. After presenting the current results, append a one-liner:
+- If a newer version is available: after presenting the current results, append a one-liner:
 
-  > Domain Shark updated to v{REMOTE_VERSION} — changes take effect next session.
+  > Domain Shark v{REMOTE_VERSION} is available — run `npx skills add mattd3080/domain-shark` to update.
 
 Do not repeat this notice more than once per session.
 
@@ -74,22 +72,19 @@ When the user provides a specific domain name (e.g., "brainstorm.com" or just "b
 
 ### 3a. Parse the Input
 
-Extract the base name (strip any TLD the user provided). You will check this base name across a standard set of TLDs.
+Determine the single domain to check:
 
-**TLD matrix to always check:**
-`.com`, `.dev`, `.io`, `.ai`, `.co`, `.app`, `.xyz`, `.me`, `.sh`, `.cc`
+- **Full domain with TLD** (e.g., "brainstorm.dev") → check exactly `brainstorm.dev`
+- **Base name without TLD** (e.g., "brainstorm") → default to `{base}.com` (check `brainstorm.com`)
 
-So if the user says "brainstorm.com" or "brainstorm", you check:
-`brainstorm.com`, `brainstorm.dev`, `brainstorm.io`, `brainstorm.ai`, `brainstorm.co`, `brainstorm.app`, `brainstorm.xyz`, `brainstorm.me`, `brainstorm.sh`, `brainstorm.cc`
+### 3b. Run a Single RDAP Availability Check
 
-### 3b. Run Parallel RDAP Availability Checks
-
-Use `curl` against the RDAP protocol to check each domain. RDAP returns:
+Use `curl` against the RDAP protocol to check the domain. RDAP returns:
 - **HTTP 404** = domain is likely **available**
 - **HTTP 200** = domain is **taken**
 - **Any other status or timeout** = **couldn't check**
 
-Run all checks in parallel using bash background processes. The following is a template using `brainstorm` as an example base name — replace `brainstorm` with the actual base name the user provided. Always run all 10 TLD checks in parallel, then `wait` before reading results.
+Check the single domain determined in Step 3a. The following is a template using `brainstorm.com` as an example — replace with the actual domain.
 
 ```bash
 TMPFILE=$(mktemp)
@@ -132,78 +127,35 @@ check_domain() {
   local url
   url=$(rdap_url "$domain")
   if [ "$url" = "WHOIS" ]; then
-    local result status
+    local result resp_status
     result=$(curl -s --max-time 10 -X POST \
       -H "Content-Type: application/json" \
       -d "{\"domain\":\"$domain\"}" \
       https://domain-shark-proxy.mattjdalley.workers.dev/v1/whois-check)
-    status=$(echo "$result" | python3 -c "import sys,json; d=json.load(sys.stdin); s=d.get('status',''); print('404' if s=='available' else '200' if s=='taken' else '000')" 2>/dev/null)
-    [ -z "$status" ] && status="000"
-    echo "$status" > "$outfile"
+    case "$result" in
+      *'"available"'*) resp_status="404" ;;
+      *'"taken"'*)     resp_status="200" ;;
+      *)               resp_status="000" ;;
+    esac
+    echo "$resp_status" > "$outfile"
   else
     curl -s -o /dev/null -w "%{http_code}" -L --max-time 10 "$url" > "$outfile"
   fi
 }
 
-# Check all 10 standard matrix TLDs in parallel
-check_domain "brainstorm.com" "${TMPFILE}.brainstorm.com" &
-check_domain "brainstorm.dev" "${TMPFILE}.brainstorm.dev" &
-check_domain "brainstorm.io"  "${TMPFILE}.brainstorm.io"  &
-check_domain "brainstorm.ai"  "${TMPFILE}.brainstorm.ai"  &
-check_domain "brainstorm.co"  "${TMPFILE}.brainstorm.co"  &
-check_domain "brainstorm.app" "${TMPFILE}.brainstorm.app" &
-check_domain "brainstorm.xyz" "${TMPFILE}.brainstorm.xyz" &
-check_domain "brainstorm.me"  "${TMPFILE}.brainstorm.me"  &
-check_domain "brainstorm.sh"  "${TMPFILE}.brainstorm.sh"  &
-check_domain "brainstorm.cc"  "${TMPFILE}.brainstorm.cc"  &
+# Check the single domain
+check_domain "brainstorm.com" "$TMPFILE"
 
-wait
+# Read the result
+STATUS=$(cat "$TMPFILE")
 
-# Read each result into a variable
-STATUS_COM=$(cat "${TMPFILE}.brainstorm.com")
-STATUS_DEV=$(cat "${TMPFILE}.brainstorm.dev")
-STATUS_IO=$(cat "${TMPFILE}.brainstorm.io")
-STATUS_AI=$(cat "${TMPFILE}.brainstorm.ai")
-STATUS_CO=$(cat "${TMPFILE}.brainstorm.co")
-STATUS_APP=$(cat "${TMPFILE}.brainstorm.app")
-STATUS_XYZ=$(cat "${TMPFILE}.brainstorm.xyz")
-STATUS_ME=$(cat "${TMPFILE}.brainstorm.me")
-STATUS_SH=$(cat "${TMPFILE}.brainstorm.sh")
-STATUS_CC=$(cat "${TMPFILE}.brainstorm.cc")
-
-# Cleanup temp files
-rm -f "${TMPFILE}" "${TMPFILE}".*
+# Cleanup
+rm -f "$TMPFILE"
 ```
 
 ### 3c. Retry Non-Definitive Results
 
-After reading all results, check for any that returned something other than 200 or 404 (e.g., 000 timeout, 429 rate limit). If there are any, retry them:
-
-1. Wait 10 seconds (`sleep 10`)
-2. Re-run the failed domains in parallel (≤5 concurrent, `--max-time 10`)
-3. Read the new results — they replace the originals
-
-This retry pattern applies everywhere RDAP checks are used (Step 3, Track B, brainstorm). Some registries rate-limit after rapid requests, but a short wait almost always clears it.
-
-```bash
-# After reading all STATUS_ variables above, retry any non-definitive results:
-# (Adapt this pattern — only retry domains where STATUS was not 200 or 404)
-# Uses rdap_url() and check_domain() defined above
-
-RETRYFILE=$(mktemp)
-# For each non-definitive result, append the domain to RETRYFILE:
-# echo "brainstorm.xyz" >> "$RETRYFILE"
-
-if [ -s "$RETRYFILE" ]; then
-  sleep 10
-  while IFS= read -r D; do
-    check_domain "$D" "${TMPFILE}.$D" &
-  done < "$RETRYFILE"
-  wait
-  # Re-read the retried results into their STATUS_ variables
-fi
-rm -f "$RETRYFILE"
-```
+If the result was not 200 or 404 (e.g., 000 timeout, 429 rate limit), wait 10 seconds and retry once. Some registries rate-limit after rapid requests, but a short wait almost always clears it. If the retry also fails, classify as "couldn't check."
 
 ### 3d. Classify Each Result
 
@@ -245,9 +197,9 @@ For each domain, determine the correct registrar using the routing table below, 
 
 ## Step 4: Present Results
 
-**Primary domain rule:** If the user provides a full domain with TLD (e.g., "brainstorm.dev"), treat that as the primary domain for the featured result. If the user provides just a base name with no TLD (e.g., "brainstorm"), default to `.com` as the primary domain. If the user provides a non-matrix TLD (e.g., "brainstorm.gg"), treat that as the primary domain for the featured result and include it as the first row of the matrix alongside the standard 10.
+Present the single domain result. Use the correct registrar link per the routing table in Step 3e.
 
-### If the user's primary domain is AVAILABLE:
+### If the domain is AVAILABLE:
 
 ```
 ## {domain} ✅ Available!
@@ -256,66 +208,12 @@ Great news — {domain} is available!
 
 [Register on {registrar} →]({registrar search URL for domain})
 
----
-
-### Available
-
-✅ {base}.com — [Register →](https://www.name.com/domain/search/{base}.com)
-✅ {base}.io — [Register →](https://www.name.com/domain/search/{base}.io)
-
-### Taken
-
-❌ {base}.dev — [Aftermarket →](https://sedo.com/search/?keyword={base}.dev)
-
-### Couldn't Check
-
-❓ {base}.ai — [Check manually →](https://www.name.com/domain/search/{base}.ai)
-
 > Availability is checked in real-time but can change at any moment. Confirm at checkout before purchasing.
 ```
 
-Show all 10 TLDs grouped by status (Available first, then Taken, then Couldn't Check). Omit any group that has no entries. Highlight the primary domain (the one the user asked about) at the top as the featured result. Use the correct registrar link for each TLD per the routing table in Step 3e.
+That's it — no TLD matrix. Show the result and the registration link.
 
-### If the user's primary domain is TAKEN:
-
-When the primary domain is taken:
-
-1. **Offer a premium check first** (before running Track B alternatives). See Step 8 for the full premium search flow. Offer it inline, like:
-
-   > "brainstorm.com is taken. I can check if it's listed for sale on the aftermarket — this uses one of your premium checks (X of 5 remaining). Want me to check, or should I jump straight to finding alternatives?"
-
-   - If the user says yes: run the premium check (Step 8), display the result at the top of the output, then run Track B below it.
-   - If the user says no (or doesn't respond with a clear yes): skip premium and go straight to Track B.
-   - **Premium search and Track B run conceptually in parallel** — don't wait for the premium result before brainstorming alternatives. If the user said yes to premium, show both results together.
-
-2. **Then run Track B** (Step 4b) — either immediately (if premium was declined) or alongside premium (if accepted).
-
-**Display format when primary domain is taken:**
-
-```
-## {domain} ❌ Taken
-
-{domain} is already registered.
-
-[View on Sedo (aftermarket) →](https://sedo.com/search/?keyword={domain})
-
----
-
-### Available
-
-✅ {base}.dev — [Register →](https://www.name.com/domain/search/{base}.dev)
-✅ {base}.io — [Register →](https://www.name.com/domain/search/{base}.io)
-
-### Taken
-
-❌ {base}.com — [Aftermarket →](https://sedo.com/search/?keyword={base}.com)
-
-> Availability is checked in real-time but can change at any moment. Confirm at checkout before purchasing.
-```
-
-Group results by status (Available first, then Taken, then Couldn't Check). Omit empty groups. If any other TLDs are available, lead with those as the silver lining. If everything is taken, acknowledge it and proceed to Step 4b.
-
-**Registry Premium Proactive Warning:** Before or alongside the premium check offer, flag likely premium candidates based on these signals:
+**Registry Premium Proactive Warning:** Flag likely premium candidates based on these signals:
 - Single dictionary word on a popular TLD (`.com`, `.io`, `.ai`)
 - Very short name (1–4 characters)
 - Common English word
@@ -324,23 +222,48 @@ When these signals are present, add a warning:
 
 > "Heads up — this is a short, common word on a popular TLD. These are often registry premiums that can cost anywhere from $100 to $10,000+/year, with elevated renewal costs every year. Check the exact price before committing."
 
+### If the domain is TAKEN:
+
+```
+## {domain} ❌ Taken
+
+{domain} is already registered.
+
+I can:
+- **Check the aftermarket** — see if it's listed for sale
+- **Scan other TLDs** — check .dev, .io, .ai, etc. for the same name
+- **Brainstorm alternatives** — find similar available domains
+
+What would be most helpful?
+```
+
+Wait for the user to choose before taking any action. Do NOT auto-run Track B or the TLD matrix.
+
+- **"Check the aftermarket"** → Run premium search (Step 8). After showing the result, re-offer the remaining options.
+- **"Scan other TLDs"** → Run the TLD scan (Step 4c).
+- **"Brainstorm alternatives"** → Run Track B (Step 4b).
+
+### If the domain COULDN'T BE CHECKED:
+
+```
+## {domain} ❓ Couldn't Check
+
+I wasn't able to verify {domain} automatically (the RDAP lookup timed out or returned an unexpected result).
+
+[Check manually on {registrar} →]({registrar search URL for domain})
+```
+
+No TLD matrix. Show the single result with a manual check link.
+
 ---
 
-## Step 4b: Track B — Alternatives When a Domain Is Taken
+## Step 4b: Track B — Alternative Domains
 
-When the user's requested domain is taken, automatically generate and check alternatives using the 5 strategies below. Run all RDAP checks in parallel (using the fallback chain from the Lookup Reference section for ccTLDs). Present only available domains, grouped by strategy.
+Run Track B only when the user explicitly requests alternatives (e.g., chooses "Brainstorm alternatives" from the options menu in Step 4). Generate and check alternatives using the 4 strategies below. Run all RDAP checks in parallel (using the fallback chain from the Lookup Reference section for ccTLDs). Present only available domains, grouped by strategy.
 
 **IMPORTANT — Track B bash timeout:** Track B checks can run 30–50+ curl requests. Always set the bash timeout to at least 5 minutes (300000ms) for Track B commands. Use `--max-time 8` per curl to allow time for registry responses and WHOIS proxy lookups.
 
-Do not ask if the user wants alternatives — just run them. The user asked about that name and it was taken; finding alternatives is the obvious next move.
-
-**Relationship to premium search:** If the user accepted a premium check, show the premium result at the top of the output (labeled clearly), then show the Track B alternatives below it. If premium was declined or unavailable, show Track B only. The premium check and Track B check are independent — do not block Track B on the premium result.
-
-### Strategy 1: TLD Variations (already checked — surface the best ones)
-
-The TLD matrix from Step 3 already covers `.com`, `.dev`, `.io`, `.ai`, `.co`, `.app`, `.xyz`, `.me`, `.sh`, `.cc`. Pull the available ones from those results rather than re-checking. Lead with these since they require no additional checks.
-
-### Strategy 2: Close Variations (highest relevance — run in parallel)
+### Strategy 1: Close Variations (highest relevance — run in parallel)
 
 Generate and check close variations of the base name:
 
@@ -355,7 +278,7 @@ Generate and check close variations of the base name:
 
 Check each variation against `.com` and `.io` at minimum. Run up to 10 concurrent checks per batch, with a 5-second `sleep` between batches (some registries rate-limit after ~20 rapid requests).
 
-### Strategy 3: Synonym & Thesaurus Exploration
+### Strategy 2: Synonym & Thesaurus Exploration
 
 Replace the key word(s) in the base name with synonyms or related concepts that carry the same meaning or feeling. Generate 5–8 synonym candidates and check each against `.com` + 1–2 relevant TLDs.
 
@@ -367,7 +290,7 @@ Examples for "brainstorm":
 
 The goal is to keep the same intent but find an unclaimed angle.
 
-### Strategy 4: Creative Reconstruction
+### Strategy 3: Creative Reconstruction
 
 Step back from the original words entirely and generate 4–6 names that capture the same concept from a fresh angle. Think about what the product/name *does* or *feels like*, not its literal meaning.
 
@@ -379,7 +302,7 @@ Examples for "brainstorm" (ideation tool):
 
 Check `.com` + 1–2 relevant TLDs for each.
 
-### Strategy 5: Domain Hacks
+### Strategy 4: Domain Hacks
 
 Generate domain hacks where the TLD completes the name or phrase. Use real ccTLDs (see the Domain Hack Catalog in the Lookup Reference section). Check each using the full fallback chain (RDAP → DoH) since many ccTLDs don't support RDAP.
 
@@ -435,14 +358,17 @@ check_domain() {
   local url
   url=$(rdap_url "$domain")
   if [ "$url" = "WHOIS" ]; then
-    local result status
+    local result resp_status
     result=$(curl -s --max-time 10 -X POST \
       -H "Content-Type: application/json" \
       -d "{\"domain\":\"$domain\"}" \
       https://domain-shark-proxy.mattjdalley.workers.dev/v1/whois-check)
-    status=$(echo "$result" | python3 -c "import sys,json; d=json.load(sys.stdin); s=d.get('status',''); print('404' if s=='available' else '200' if s=='taken' else '000')" 2>/dev/null)
-    [ -z "$status" ] && status="000"
-    echo "$status" > "$outfile"
+    case "$result" in
+      *'"available"'*) resp_status="404" ;;
+      *'"taken"'*)     resp_status="200" ;;
+      *)               resp_status="000" ;;
+    esac
+    echo "$resp_status" > "$outfile"
   else
     curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 "$url" > "$outfile"
   fi
@@ -499,20 +425,7 @@ rm -rf "$TMPDIR"
 ### Track B Output Format
 
 ```
-## brainstorm.com ❌ Taken
-
-brainstorm.com is already registered.
-
-[View on Sedo (aftermarket) →](https://sedo.com/search/?keyword=brainstorm.com)
-
----
-
-## Available Alternatives
-
-**Same Name, Different TLD**
-
-✅ brainstorm.dev — [Register →](https://www.name.com/domain/search/brainstorm.dev)
-✅ brainstorm.ai — [Register →](https://www.name.com/domain/search/brainstorm.ai)
+## Available Alternatives for brainstorm
 
 **Close Variations**
 
@@ -542,34 +455,36 @@ Checked 45 domains — 11 are available. Want to explore any of these directions
 
 Only show sections that have at least one available result. If a strategy yields nothing available, omit that section entirely. Omit the count line if all strategies came up empty.
 
-### If the user's primary domain COULDN'T BE CHECKED:
+---
+
+## Step 4c: TLD Scan (opt-in)
+
+Run the TLD scan only when the user explicitly requests it (e.g., chooses "Scan other TLDs" from the options menu in Step 4).
+
+Check the standard TLD matrix — `.com`, `.dev`, `.io`, `.ai`, `.co`, `.app`, `.xyz`, `.me`, `.sh`, `.cc` — **excluding the TLD already checked in Step 3b**. Run all checks in parallel using the existing template pattern (same `rdap_url()` and `check_domain()` functions, background processes with `wait`).
+
+After retry (same retry logic as Step 3c, applied per-domain), present results grouped by status:
 
 ```
-## {domain} ❓ Couldn't Check
-
-I wasn't able to verify {domain} automatically (the RDAP lookup timed out or returned an unexpected result).
-
-[Check manually on {registrar} →]({registrar search URL for domain})
-
----
+## TLD Scan for {base}
 
 ### Available
 
-✅ {base}.com — [Register →](https://www.name.com/domain/search/{base}.com)
+✅ {base}.dev — [Register →](https://www.name.com/domain/search/{base}.dev)
 ✅ {base}.io — [Register →](https://www.name.com/domain/search/{base}.io)
 
 ### Taken
 
-❌ {base}.dev — [Aftermarket →](https://sedo.com/search/?keyword={base}.dev)
+❌ {base}.ai — [Aftermarket →](https://sedo.com/search/?keyword={base}.ai)
 
 ### Couldn't Check
 
-❓ {base}.ai — [Check manually →](https://www.name.com/domain/search/{base}.ai)
+❓ {base}.co — [Check manually →](https://www.name.com/domain/search/{base}.co)
 
 > Availability is checked in real-time but can change at any moment. Confirm at checkout before purchasing.
 ```
 
-Group results by status (Available first, then Taken, then Couldn't Check). Omit empty groups. Use the correct registrar link for each TLD per the routing table in Step 3e.
+Group by Available first, then Taken, then Couldn't Check. Omit any group that has no entries. Use the correct registrar link for each TLD per the routing table in Step 3e.
 
 ---
 
@@ -587,9 +502,9 @@ Place it at the bottom of the results table. Do not repeat it in subsequent chec
 
 After showing results, offer one natural follow-up:
 
-- If the primary domain was **available**: "Want me to check any variations or related names?"
-- If the primary domain was **taken**: "Would you like me to brainstorm alternative domain names based on '{base}'?"
-- If results were **mixed**: "A few good options there — want to explore variations or check other names?"
+- If the domain was **available**: "Want me to check any other TLDs or variations?"
+- If the domain was **taken**: already handled by the options menu in Step 4.
+- If the domain **couldn't be checked**: "Want me to try a different TLD, or brainstorm alternatives?"
 
 Keep it to one short line. Don't over-explain.
 
@@ -601,7 +516,7 @@ Keep it to one short line. Don't over-explain.
 - Use markdown formatting for results — tables, headers, and links render well in Claude Code.
 - If the user provides multiple domain names at once, check them all. Run all RDAP lookups in a single parallel batch (all background processes, one `wait`).
 - Lowercase all domains before checking. RDAP is case-insensitive but keep output lowercase for consistency.
-- If the user provides a domain with an unusual TLD (e.g., brainstorm.gg), check that specific domain too and include it in the matrix alongside the standard 10.
+- If the user provides a domain with an unusual TLD (e.g., brainstorm.gg), check that specific domain only.
 - Do not hallucinate availability. Always check via `curl` before reporting status. If a check fails, report ❓ honestly.
 - For brainstorm mode (Flow 2), see Step 7 (7a–7f) below.
 - If the user declines to brainstorm AND declines to check a specific name, give them a graceful exit: "No problem! Just ask me about domains whenever you need help finding one."
@@ -731,14 +646,17 @@ check_domain() {
   local url
   url=$(rdap_url "$domain")
   if [ "$url" = "WHOIS" ]; then
-    local result status
+    local result resp_status
     result=$(curl -s --max-time 10 -X POST \
       -H "Content-Type: application/json" \
       -d "{\"domain\":\"$domain\"}" \
       https://domain-shark-proxy.mattjdalley.workers.dev/v1/whois-check)
-    status=$(echo "$result" | python3 -c "import sys,json; d=json.load(sys.stdin); s=d.get('status',''); print('404' if s=='available' else '200' if s=='taken' else '000')" 2>/dev/null)
-    [ -z "$status" ] && status="000"
-    echo "$status" > "$outfile"
+    case "$result" in
+      *'"available"'*) resp_status="404" ;;
+      *'"taken"'*)     resp_status="200" ;;
+      *)               resp_status="000" ;;
+    esac
+    echo "$resp_status" > "$outfile"
   else
     curl -s -o /dev/null -w "%{http_code}" -L --max-time 8 "$url" > "$outfile"
   fi
@@ -897,7 +815,7 @@ Has the user configured their own Fastly API token?
 
 ├── YES → Call Fastly Domain Research API directly with their token (unlimited checks)
 │
-│   FASTLY_TOKEN=$(python3 -c "import json; print(json.load(open('$HOME/.claude/domain-shark/config.json'))['fastlyApiToken'])" 2>/dev/null)
+│   FASTLY_TOKEN=$(grep -o '"fastlyApiToken":"[^"]*"' "$HOME/.claude/domain-shark/config.json" 2>/dev/null | cut -d'"' -f4)
 │
 │   # Replace DOMAIN with the actual domain being checked (e.g., brainstorm.com)
 │   PREMIUM_RESULT=$(curl -s --max-time 10 \
@@ -916,10 +834,8 @@ Has the user configured their own Fastly API token?
       -d '{"domain":"DOMAIN"}' \
       https://domain-shark-proxy.mattjdalley.workers.dev/v1/premium-check)
 
-    HTTP_STATUS=$(echo "$PREMIUM_RESULT" | python3 -c \
-      "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null)
-    REMAINING=$(echo "$PREMIUM_RESULT" | python3 -c \
-      "import sys,json; d=json.load(sys.stdin); print(d.get('remainingChecks',''))" 2>/dev/null)
+    HTTP_STATUS=$(printf '%s' "$PREMIUM_RESULT" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+    REMAINING=$(printf '%s' "$PREMIUM_RESULT" | grep -o '"remainingChecks":[0-9]*' | cut -d: -f2)
 
     ├── 200 + result data + remainingChecks → Show result (Step 8 result display)
     ├── 429 quota_exceeded → "You've used all 5 free premium checks this month.
@@ -1032,7 +948,7 @@ When the user says they want to add their Fastly API token (e.g., "I want to use
 3. **Verify with a test API call:**
 
    ```bash
-   FASTLY_TOKEN=$(python3 -c "import json; print(json.load(open('$HOME/.claude/domain-shark/config.json'))['fastlyApiToken'])" 2>/dev/null)
+   FASTLY_TOKEN=$(grep -o '"fastlyApiToken":"[^"]*"' "$HOME/.claude/domain-shark/config.json" 2>/dev/null | cut -d'"' -f4)
 
    TEST_RESULT=$(curl -s --max-time 10 \
      -H "Fastly-Key: $FASTLY_TOKEN" \
@@ -1054,7 +970,7 @@ At the start of any premium check, read the config file to determine whether to 
 ```bash
 FASTLY_TOKEN=""
 if [ -f ~/.claude/domain-shark/config.json ]; then
-  FASTLY_TOKEN=$(python3 -c "import json; print(json.load(open('$HOME/.claude/domain-shark/config.json'))['fastlyApiToken'])" 2>/dev/null)
+  FASTLY_TOKEN=$(grep -o '"fastlyApiToken":"[^"]*"' "$HOME/.claude/domain-shark/config.json" 2>/dev/null | cut -d'"' -f4)
 fi
 
 if [ -n "$FASTLY_TOKEN" ]; then
@@ -1064,7 +980,7 @@ else
 fi
 ```
 
-Use `python3 -c` for JSON parsing — do not assume `jq` is installed.
+Use `grep` + `cut` for JSON parsing — do not assume `jq` or `python3` is installed.
 
 ---
 
