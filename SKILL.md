@@ -1,7 +1,7 @@
 ---
 name: domain-puppy
 description: This skill should be used when the user asks to "check if a domain is available", "find a domain name", "brainstorm domain names", "is X.com taken", "search for domains", or is trying to name a product, app, or startup and needs domain options. Also activate when the user mentions needing a domain or asks about aftermarket domains listed for sale.
-version: 1.4.1
+version: 1.5.0
 allowed-tools: Bash
 metadata: {"openclaw": {"requires": {"bins": ["curl"]}, "homepage": "https://github.com/mattd3080/domain-puppy"}}
 ---
@@ -17,13 +17,16 @@ You are Domain Puppy, a helpful domain-hunting assistant. Follow these instructi
 On first activation in a session, check if a newer version is available. Do not block or delay the user's request — run this in the background alongside Step 1.
 
 ```bash
-LOCAL_VERSION="1.4.1"
+LOCAL_VERSION="1.5.0"
 REMOTE_VERSION=$(curl -s --max-time 3 "https://raw.githubusercontent.com/mattd3080/domain-puppy/main/SKILL.md" | grep '^version:' | head -1 | awk '{print $2}')
 if [ -n "$REMOTE_VERSION" ] && [ "$LOCAL_VERSION" != "$REMOTE_VERSION" ]; then
   echo "update_available=true local=$LOCAL_VERSION remote=$REMOTE_VERSION"
 else
   echo "up_to_date=true version=$LOCAL_VERSION"
 fi
+
+# Playwright detection (silent — used only if premium quota runs out)
+(npx --no-install playwright --version 2>/dev/null || playwright --version 2>/dev/null) && echo "playwright_available=true" || echo "playwright_available=false"
 ```
 
 - If versions match or the curl fails: do nothing.
@@ -32,6 +35,8 @@ fi
   > Domain Puppy v{REMOTE_VERSION} is available — run `npx skills add mattd3080/domain-puppy` to update.
 
 Do not repeat this notice more than once per session.
+
+- **Playwright detection:** If the output includes `playwright_available=true`, remember this silently. Do not mention Playwright to the user. This flag is only used later in Step 8 (quota handler) and Step 10 (browser-based price check). If `playwright_available=false`, do nothing — premium search works normally via the API.
 
 ---
 
@@ -89,7 +94,7 @@ Check the single domain determined in Step 3a. The following is a template using
 ```bash
 TMPFILE=$(mktemp)
 
-# --- Domain availability routing (v1.4.1) ---
+# --- Domain availability routing (v1.5.0) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -132,9 +137,11 @@ check_domain() {
     return
   elif [ "$url" = "WHOIS" ]; then
     local result resp_status
+    local safe_domain
+    safe_domain=$(printf '%s' "$domain" | sed 's/["\]/\\&/g')
     result=$(curl -s --max-time 10 -X POST \
       -H "Content-Type: application/json" \
-      -d "{\"domain\":\"$domain\"}" \
+      -d "{\"domain\":\"$safe_domain\"}" \
       https://domain-puppy-proxy.mattjdalley.workers.dev/v1/whois-check)
     case "$result" in
       *'"available"'*) resp_status="404" ;;
@@ -334,7 +341,7 @@ Always verify a ccTLD exists and accepts registrations before suggesting it.
 ```bash
 TMPDIR=$(mktemp -d)
 
-# --- Domain availability routing (v1.4.1) ---
+# --- Domain availability routing (v1.5.0) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -377,9 +384,11 @@ check_domain() {
     return
   elif [ "$url" = "WHOIS" ]; then
     local result resp_status
+    local safe_domain
+    safe_domain=$(printf '%s' "$domain" | sed 's/["\]/\\&/g')
     result=$(curl -s --max-time 10 -X POST \
       -H "Content-Type: application/json" \
-      -d "{\"domain\":\"$domain\"}" \
+      -d "{\"domain\":\"$safe_domain\"}" \
       https://domain-puppy-proxy.mattjdalley.workers.dev/v1/whois-check)
     case "$result" in
       *'"available"'*) resp_status="404" ;;
@@ -639,7 +648,7 @@ For each name:
 ```bash
 TMPDIR=$(mktemp -d)
 
-# --- Domain availability routing (v1.4.1) ---
+# --- Domain availability routing (v1.5.0) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -682,9 +691,11 @@ check_domain() {
     return
   elif [ "$url" = "WHOIS" ]; then
     local result resp_status
+    local safe_domain
+    safe_domain=$(printf '%s' "$domain" | sed 's/["\]/\\&/g')
     result=$(curl -s --max-time 10 -X POST \
       -H "Content-Type: application/json" \
-      -d "{\"domain\":\"$domain\"}" \
+      -d "{\"domain\":\"$safe_domain\"}" \
       https://domain-puppy-proxy.mattjdalley.workers.dev/v1/whois-check)
     case "$result" in
       *'"available"'*) resp_status="404" ;;
@@ -875,12 +886,51 @@ Has the user configured their own Fastly API token?
     REMAINING=$(printf '%s' "$PREMIUM_RESULT" | grep -o '"remainingChecks":[0-9]*' | cut -d: -f2)
 
     ├── 200 + result data + remainingChecks → Show result (Step 8 result display)
-    ├── 429 quota_exceeded → "You've used all 5 free premium checks this month.
-    │   Want to add your own Fastly API token for unlimited checks? (See domain-puppy config)"
+    │
+    ├── 429 quota_exceeded → Friendly options (see Quota Exceeded Handler below)
+    │
     └── 503 service_unavailable → See Transparent Degradation section below
 ```
 
 Always use `-s` on curl to suppress output that might contain the key. Never log or display the key in any form.
+
+---
+
+### Quota Exceeded Handler (429 Response)
+
+When the proxy returns 429, present a friendly message — no alarm language ("error", "exceeded", "limit"). The options depend on whether Playwright was detected in Step 0.
+
+**If Playwright was detected (`playwright_available=true`):**
+
+> Your free premium searches for this month are used up. Here's what we can do:
+>
+> 1. **Check the registrar directly** — I'll look up the pricing page for you (takes a few seconds)
+> 2. **Set up your own API key** — unlimited premium checks, free to create
+> 3. **Check manually** — I'll open the registrar page in your browser
+>
+> Which would you prefer?
+
+**If Playwright was NOT detected:**
+
+> Your free premium searches for this month are used up. Here's what we can do:
+>
+> 1. **Set up your own API key** — unlimited premium checks, free to create
+> 2. **Check manually** — I'll open the registrar page in your browser
+>
+> Which would you prefer?
+
+**After the user chooses (Playwright detected — 3-option menu):**
+
+- **Option 1 (registrar check):** Run Step 10 (Browser-Based Price Check) for the domain.
+- **Option 2 (API key):** Run Step 9 (Config File Management) — walk them through token setup.
+- **Option 3 (manual):** Run `open "{registrar search URL for domain}"` using the routing table from Step 3e.
+
+**After the user chooses (no Playwright — 2-option menu):**
+
+- **Option 1 (API key):** Run Step 9 (Config File Management) — walk them through token setup.
+- **Option 2 (manual):** Run `open "{registrar search URL for domain}"` using the routing table from Step 3e.
+
+**Session memory:** Remember the user's choice for the rest of this conversation. If they hit the quota again on a different domain in the same session, automatically use their previous choice without re-asking. If they chose the registrar check (Playwright path only), silently run Step 10 for each subsequent domain. If they chose the manual option (whichever number it was), silently open the link each time.
 
 ---
 
@@ -932,6 +982,12 @@ Do not offer it. No mention needed. Proceed as if premium search does not exist.
 
 **User has their own API key and it returns an error:**
 > "Your Fastly API token returned an error — it may have expired or been revoked. Check your Fastly dashboard."
+
+**Browser-based price check fails (Step 10):**
+> "I wasn't able to pull the pricing from the registrar page. Here's a direct link so you can check it yourself:
+> [{registrar name} →]({registrar search URL for domain})"
+
+Then run `open "{registrar search URL for domain}"` to open the page in the user's browser. Do not retry the Playwright scrape — one attempt is enough. If repeated Step 10 failures occur in the same session, skip future Playwright attempts and default to opening the manual link directly.
 
 Never pretend a feature doesn't exist after the user has seen it in use during the current session.
 
@@ -1018,6 +1074,183 @@ fi
 ```
 
 Use `grep` + `cut` for JSON parsing — do not assume `jq` or `python3` is installed.
+
+---
+
+## Step 10: Browser-Based Price Check (Playwright Fallback)
+
+This step is triggered only from the Quota Exceeded Handler in Step 8 when the user chooses "Check the registrar directly" and Playwright was detected in Step 0. It scrapes the registrar's domain search page to extract pricing.
+
+---
+
+### When to Use
+
+- The user has exhausted their 5 free premium checks (429 from proxy)
+- Playwright was detected in Step 0 (`playwright_available=true`)
+- The user chose option 1 ("Check the registrar directly") from the quota handler
+- OR: the user previously chose option 1 this session and another premium check hit the quota (auto-use via session memory)
+
+Never trigger Step 10 for any other reason. It is not a replacement for the premium API — it is a fallback.
+
+---
+
+### Registrar Routing
+
+Determine which registrar to scrape based on TLD:
+
+| TLD | Registrar | Search URL |
+|-----|-----------|------------|
+| `.st`, `.to`, `.pt`, `.my`, `.gg` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
+| Everything else | name.com | `https://www.name.com/domain/search/{domain}` |
+
+This must match the routing table in Step 3e.
+
+---
+
+### Execution
+
+Write a short Node.js script to a temp file, run it, and clean up. The script is a **static template** — no user-supplied data is interpolated into the script source. The domain is passed exclusively as a CLI argument (`process.argv[2]`).
+
+```bash
+TMPSCRIPT=$(mktemp /tmp/domain-puppy-scrape-XXXXXX.cjs)
+trap 'rm -f "$TMPSCRIPT"' EXIT
+
+cat > "$TMPSCRIPT" << 'SCRAPE_EOF'
+const { chromium } = require('playwright');
+
+const domain = process.argv[2];
+if (!domain || !/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*\.[a-z]{2,}$/.test(domain)) {
+  console.log(JSON.stringify({ found: false, error: 'invalid_domain' }));
+  process.exit(0);
+}
+
+const tld = domain.split('.').pop();
+const dynadotTLDs = ['st', 'to', 'pt', 'my', 'gg'];
+const isDynadot = dynadotTLDs.includes(tld);
+
+const url = isDynadot
+  ? `https://www.dynadot.com/domain/search?domain=${encodeURIComponent(domain)}`
+  : `https://www.name.com/domain/search/${encodeURIComponent(domain)}`;
+
+(async () => {
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+
+    if (isDynadot) {
+      // Dynadot: intercept the search API response for reliable price extraction
+      let priceFound = false;
+      page.on('response', async (resp) => {
+        try {
+          if (resp.url().includes('/domain/search') && resp.status() === 200) {
+            const text = await resp.text();
+            // Look for price patterns in API responses
+            const priceMatch = text.match(/\$[\d,]+\.?\d{0,2}/);
+            if (priceMatch && !priceFound) {
+              priceFound = true;
+              console.log(JSON.stringify({ found: true, price: priceMatch[0], registrar: 'Dynadot', url }));
+            }
+          }
+        } catch {}
+      });
+      await page.goto(url, { timeout: 15000, waitUntil: 'networkidle' });
+      // Fallback: check rendered DOM if network intercept missed it
+      if (!priceFound) {
+        try {
+          const priceEl = await page.locator('text=/\\$[\\d,]+\\.?\\d{0,2}/')
+            .first()
+            .textContent({ timeout: 8000 });
+          if (priceEl) {
+            const match = priceEl.match(/\$[\d,]+\.?\d{0,2}/);
+            if (match) {
+              console.log(JSON.stringify({ found: true, price: match[0], registrar: 'Dynadot', url }));
+              priceFound = true;
+            }
+          }
+        } catch {}
+      }
+      if (!priceFound) {
+        console.log(JSON.stringify({ found: false, registrar: 'Dynadot', url }));
+      }
+    } else {
+      // name.com: wait for page load, then find price via text pattern
+      await page.goto(url, { timeout: 15000, waitUntil: 'networkidle' });
+      try {
+        const priceEl = await page.locator('text=/\\$[\\d,]+\\.?\\d{0,2}/')
+          .first()
+          .textContent({ timeout: 8000 });
+        if (priceEl) {
+          const match = priceEl.match(/\$[\d,]+\.?\d{0,2}/);
+          if (match) {
+            console.log(JSON.stringify({ found: true, price: match[0], registrar: 'name.com', url }));
+          } else {
+            console.log(JSON.stringify({ found: false, registrar: 'name.com', url }));
+          }
+        } else {
+          console.log(JSON.stringify({ found: false, registrar: 'name.com', url }));
+        }
+      } catch {
+        console.log(JSON.stringify({ found: false, registrar: 'name.com', url }));
+      }
+    }
+  } catch (err) {
+    const registrar = isDynadot ? 'Dynadot' : 'name.com';
+    console.log(JSON.stringify({ found: false, registrar, url, error: err.message }));
+  } finally {
+    if (browser) await browser.close();
+  }
+})();
+SCRAPE_EOF
+
+DOMAIN="brainstorm.com"  # ← set to the actual domain being checked
+node "$TMPSCRIPT" "$DOMAIN"
+```
+
+Set `DOMAIN` to the actual domain being checked (e.g., `brainstorm.com`). The domain is passed as a CLI argument via the shell variable — never interpolate it into the script source.
+
+Set the bash timeout to **30000ms** (30 seconds) for this command. The script has its own internal timeouts (15s for page load, 8s for selector).
+
+---
+
+### Interpreting Results
+
+The script outputs a single line of JSON. Parse it with `grep` + `cut`:
+
+```bash
+SCRAPE_RESULT=$( <output from the node command above> )
+FOUND=$(printf '%s' "$SCRAPE_RESULT" | grep -o '"found":true' | head -1)
+PRICE=$(printf '%s' "$SCRAPE_RESULT" | grep -o '"price":"[^"]*"' | head -1 | cut -d'"' -f4)
+SCRAPE_URL=$(printf '%s' "$SCRAPE_RESULT" | grep -o '"url":"[^"]*"' | head -1 | cut -d'"' -f4)
+```
+
+**If `found` is true and a price was extracted:**
+
+> I checked {registrar}'s page directly. Here's what I found:
+>
+> **{domain}** — {price}
+>
+> I'll open the page so you can see the full details and complete the purchase if you'd like.
+
+Then run `open "{url}"` to open the registrar page.
+
+Add a note: "This price is from the registrar's public search page. Confirm the exact price at checkout — it may vary based on registration period or promotions."
+
+**If `found` is false (no price extracted, timeout, or any error):**
+
+Fall through to the Transparent Degradation handler for "Browser-based price check fails" — show the direct link and open it in the user's browser.
+
+---
+
+### Important Constraints
+
+- **Static script template:** The temp file contains zero user-supplied data. The domain is passed only as `process.argv[2]`. This prevents code injection regardless of domain content.
+- **Domain validation:** The script validates the domain against `/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*\.[a-z]{2,}$/` before using it. Invalid domains produce `{ "found": false }` — no error throw.
+- **Temp file cleanup:** The `trap 'rm -f "$TMPSCRIPT"' EXIT` in the bash wrapper ensures cleanup on all exit paths (success, failure, signal).
+- **CJS format:** The script uses `.cjs` extension and `require()` (CommonJS) because Playwright's Node.js API uses CommonJS by default and this avoids ESM compatibility issues across Node versions.
+- **Headless only:** The browser launches in headless mode. No visible window.
+- **One attempt per domain:** If the scrape fails, do not retry. Fall through to manual link immediately.
+- **No bulk scraping:** Step 10 runs for a single domain at a time, only when triggered by the quota handler. It is never used in brainstorm mode, TLD scans, or Track B.
 
 ---
 
