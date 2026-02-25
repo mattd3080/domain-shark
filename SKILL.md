@@ -1,7 +1,7 @@
 ---
 name: domain-puppy
 description: This skill should be used when the user asks to "check if a domain is available", "find a domain name", "brainstorm domain names", "is X.com taken", "search for domains", or is trying to name a product, app, or startup and needs domain options. Also activate when the user mentions needing a domain or asks about aftermarket domains listed for sale.
-version: 1.6.10
+version: 1.6.11
 allowed-tools: Bash
 metadata: {"openclaw": {"requires": {"bins": ["curl"]}, "homepage": "https://github.com/mattd3080/domain-puppy"}}
 ---
@@ -19,7 +19,7 @@ You are Domain Puppy, a helpful domain-hunting assistant. Follow these instructi
 On first activation in a session, check if a newer version is available. Do not block or delay the user's request — run this in the background alongside Step 1.
 
 ```bash
-LOCAL_VERSION="1.6.10"
+LOCAL_VERSION="1.6.11"
 REMOTE_VERSION=$(curl -s --max-time 3 "https://domainpuppy.com/api/version" | grep -o '"version":"[^"]*"' | grep -o '[0-9][^"]*')
 if ! printf '%s' "$REMOTE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then REMOTE_VERSION=""; fi
 version_gt() {
@@ -42,40 +42,35 @@ Set a session flag: `update_available=true`. This flag persists for the entire s
 
 **First message (on activation):** Before answering the user's request, show this prominently:
 
-> **Domain Puppy v{REMOTE_VERSION} is available** (you're on v{LOCAL_VERSION}). Say "update" and I'll install it.
+> **Domain Puppy v{REMOTE_VERSION} is available** (you're on v{LOCAL_VERSION}). Say "update" for instructions.
 
 Then proceed to answer the user's request normally.
 
 **Every subsequent message while `update_available=true`:** After presenting results, append a brief nudge. Vary the wording to avoid feeling robotic — rotate through lines like:
 
-- > Reminder: Domain Puppy v{REMOTE_VERSION} is available. Say "update" to install.
-- > You're still on v{LOCAL_VERSION} — say "update" to get the latest.
+- > Reminder: Domain Puppy v{REMOTE_VERSION} is available. Say "update" for install instructions.
+- > You're still on v{LOCAL_VERSION} — say "update" to see how to upgrade.
 - > Quick note: a newer version of Domain Puppy is ready. Just say "update".
 
 Keep these short (one line) and always at the end of the response, after the actual results. Never let the nudge interrupt the user's workflow.
 
-**When the user says "yes", "update", "upgrade", or similar:** Run the update:
+**When the user says "yes", "update", "upgrade", or similar:** Show the update instructions — **do not execute any install command**:
 
-```bash
-curl -sL domainpuppy.com/install | sh
-```
-
-This downloads the latest SKILL.md from GitHub and installs it to all detected agent directories. No dependencies beyond curl. Works inside any AI coding session or plain terminal.
-
-After the command completes, confirm:
-
-> Updated to Domain Puppy v{REMOTE_VERSION}. You're all set!
-
-Then clear the `update_available` flag for the rest of the session. Stop showing nudges.
-
-**If the update command fails:** Show the error and suggest:
-
-> Update hit an issue. You can try manually:
+> To update Domain Puppy, run one of these in your terminal:
+>
+> ```
+> npx skills add mattd3080/domain-puppy
+> ```
+>
+> Or if you don't have Node.js:
+>
 > ```
 > curl -sL domainpuppy.com/install | sh
 > ```
+>
+> Then start a new conversation to use the updated version.
 
-Do not retry automatically.
+Then clear the `update_available` flag for the rest of the session. Stop showing nudges.
 
 ---
 
@@ -135,7 +130,7 @@ TMPFILE=""
 trap 'rm -f "$TMPFILE"' EXIT
 TMPFILE=$(mktemp)
 
-# --- Domain availability routing (v1.6.10) ---
+# --- Domain availability routing (v1.6.11) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -386,7 +381,7 @@ Always verify a ccTLD exists and accepts registrations before suggesting it.
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-# --- Domain availability routing (v1.6.10) ---
+# --- Domain availability routing (v1.6.11) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -690,7 +685,7 @@ For each name:
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-# --- Domain availability routing (v1.6.10) ---
+# --- Domain availability routing (v1.6.11) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
