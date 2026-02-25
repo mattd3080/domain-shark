@@ -954,7 +954,7 @@ When the proxy returns 429, present a friendly message — no alarm language ("e
 
 > Your free premium searches for this month are used up. Here's what we can do:
 >
-> 1. **Check the registrar directly** — I'll look up the pricing page for you (takes a few seconds)
+> 1. **Use Playwright** — I'll use Playwright on your machine to check the registrar's pricing page directly (takes a few seconds)
 > 2. **Set up your own API key** — unlimited premium checks, free to create
 > 3. **Check manually** — I'll open the registrar page in your browser
 >
@@ -968,6 +968,8 @@ When the proxy returns 429, present a friendly message — no alarm language ("e
 > 2. **Check manually** — I'll open the registrar page in your browser
 >
 > Which would you prefer?
+>
+> (Tip: If you have [Playwright](https://playwright.dev/) installed, I can also check registrar pricing pages directly.)
 
 **After the user chooses (Playwright detected — 3-option menu):**
 
