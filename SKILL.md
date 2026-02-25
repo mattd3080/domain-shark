@@ -980,7 +980,7 @@ When the proxy returns 429, present a friendly message — no alarm language ("e
 - **Option 1 (API key):** Run Step 9 (Config File Management) — walk them through token setup.
 - **Option 2 (manual):** Run `open "{registrar search URL for domain}"` using the routing table from Step 3e.
 
-**Session memory:** Remember the user's choice for the rest of this conversation. If they hit the quota again on a different domain in the same session, automatically use their previous choice without re-asking. If they chose the registrar check (Playwright path only), silently run Step 10 for each subsequent domain. If they chose the manual option (whichever number it was), silently open the link each time.
+**Session memory:** Remember the user's choice for the rest of this conversation. If they hit the quota again on a different domain in the same session, automatically use their previous choice without re-asking. If they chose the registrar check (Playwright path), **still ask for consent every time** before running Step 10 (see Disclosure & Consent in Step 10) — unless the user has granted blanket permission. If they chose the manual option (whichever number it was), silently open the link each time.
 
 ---
 
@@ -1137,13 +1137,15 @@ This step is triggered only from the Quota Exceeded Handler in Step 8 when the u
 
 ### Disclosure & Consent
 
-Before running Step 10 for the **first time in a session**, display this disclosure and wait for the user to confirm:
+**Every time** before running Step 10, display this disclosure and wait for the user to confirm:
 
 > **Browser price check:** This will use Playwright on your machine to visit {registrar}'s domain search page (`{url}`) and extract pricing. By proceeding, you acknowledge that this is an automated visit to a third-party website and you are responsible for compliance with their terms of service.
 >
 > Continue? (y/n)
 
-If the user declines, fall through to the manual link handler immediately. If the user confirms, remember their consent for the rest of the session — do not re-prompt on subsequent Step 10 invocations.
+If the user declines, fall through to the manual link handler immediately.
+
+**Always ask every time.** Do not skip this prompt based on previous consent — unless the user explicitly says something like "don't ask me again", "always use Playwright", or "skip the prompt from now on". Only then may you remember their blanket consent for the rest of the session.
 
 ---
 
@@ -1152,8 +1154,7 @@ If the user declines, fall through to the manual link handler immediately. If th
 - The user has exhausted their 5 free premium checks (429 from proxy)
 - Playwright was detected in Step 0 (`playwright_available=true`)
 - The user chose option 1 ("Check the registrar directly") from the quota handler
-- The user has confirmed the disclosure above (or previously confirmed this session)
-- OR: the user previously chose option 1 this session and another premium check hit the quota (auto-use via session memory, but only if disclosure was already confirmed)
+- The user has confirmed the disclosure above (asked every time — never skip unless user granted blanket permission)
 
 Never trigger Step 10 for any other reason. It is not a replacement for the premium API — it is a fallback.
 
