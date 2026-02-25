@@ -1,7 +1,7 @@
 ---
 name: domain-puppy
 description: This skill should be used when the user asks to "check if a domain is available", "find a domain name", "brainstorm domain names", "is X.com taken", "search for domains", or is trying to name a product, app, or startup and needs domain options. Also activate when the user mentions needing a domain or asks about aftermarket domains listed for sale.
-version: 1.6.6
+version: 1.6.7
 allowed-tools: Bash
 metadata: {"openclaw": {"requires": {"bins": ["curl"]}, "homepage": "https://github.com/mattd3080/domain-puppy"}}
 ---
@@ -17,7 +17,7 @@ You are Domain Puppy, a helpful domain-hunting assistant. Follow these instructi
 On first activation in a session, check if a newer version is available. Do not block or delay the user's request — run this in the background alongside Step 1.
 
 ```bash
-LOCAL_VERSION="1.6.6"
+LOCAL_VERSION="1.6.7"
 REMOTE_VERSION=$(curl -s --max-time 3 "https://raw.githubusercontent.com/mattd3080/domain-puppy/main/SKILL.md" | grep '^version:' | head -1 | awk '{print $2}')
 if ! printf '%s' "$REMOTE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then REMOTE_VERSION=""; fi
 version_gt() {
@@ -132,7 +132,7 @@ Check the single domain determined in Step 3a. The following is a template using
 TMPFILE=$(mktemp)
 trap 'rm -f "$TMPFILE"' EXIT
 
-# --- Domain availability routing (v1.6.6) ---
+# --- Domain availability routing (v1.6.7) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -381,7 +381,7 @@ Always verify a ccTLD exists and accepts registrations before suggesting it.
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
-# --- Domain availability routing (v1.6.6) ---
+# --- Domain availability routing (v1.6.7) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -690,7 +690,7 @@ For each name:
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
-# --- Domain availability routing (v1.6.6) ---
+# --- Domain availability routing (v1.6.7) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -1152,9 +1152,7 @@ This step is triggered from the Quota Exceeded Handler in Step 8 when the user c
 
 The **first time** Playwright is about to be used in any session, display this and wait for confirmation:
 
-> **Heads up:** You chose the Playwright option. Your coding agent will write and run a Playwright script on your machine to visit a registrar's search page and extract pricing. Domain Puppy does not provide or control the script — your agent writes it. By continuing, you're opting in to this and future browser-based checks this session. You're responsible for compliance with the registrar's terms of service.
->
-> OK to proceed? (y/n)
+> I'll use Playwright on your machine to check the registrar's page. The script is written by your agent, not Domain Puppy. This opts you in for future checks this session. OK? (y/n)
 
 If the user confirms, **remember consent for the rest of the session** — do not re-prompt. If the user declines, fall through to the manual link handler.
 
