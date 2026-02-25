@@ -37,7 +37,8 @@ report/
 # Other editors
 .windsurf/
 
-# Skills lock (local only)
+# Skills (installed locally, not part of this repo)
+skills/
 skills-lock.json
 
 # Python cache
