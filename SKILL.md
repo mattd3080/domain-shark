@@ -1,7 +1,7 @@
 ---
 name: domain-puppy
 description: This skill should be used when the user asks to "check if a domain is available", "find a domain name", "brainstorm domain names", "is X.com taken", "search for domains", or is trying to name a product, app, or startup and needs domain options. Also activate when the user mentions needing a domain or asks about aftermarket domains listed for sale.
-version: 1.6.4
+version: 1.7.0
 allowed-tools: Bash
 metadata: {"openclaw": {"requires": {"bins": ["curl"]}, "homepage": "https://github.com/mattd3080/domain-puppy"}}
 ---
@@ -17,7 +17,7 @@ You are Domain Puppy, a helpful domain-hunting assistant. Follow these instructi
 On first activation in a session, check if a newer version is available. Do not block or delay the user's request — run this in the background alongside Step 1.
 
 ```bash
-LOCAL_VERSION="1.6.4"
+LOCAL_VERSION="1.7.0"
 REMOTE_VERSION=$(curl -s --max-time 3 "https://raw.githubusercontent.com/mattd3080/domain-puppy/main/SKILL.md" | grep '^version:' | head -1 | awk '{print $2}')
 if ! printf '%s' "$REMOTE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then REMOTE_VERSION=""; fi
 version_gt() {
@@ -132,7 +132,7 @@ Check the single domain determined in Step 3a. The following is a template using
 TMPFILE=$(mktemp)
 trap 'rm -f "$TMPFILE"' EXIT
 
-# --- Domain availability routing (v1.6.4) ---
+# --- Domain availability routing (v1.7.0) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -381,7 +381,7 @@ Always verify a ccTLD exists and accepts registrations before suggesting it.
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
-# --- Domain availability routing (v1.6.4) ---
+# --- Domain availability routing (v1.7.0) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -690,7 +690,7 @@ For each name:
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
-# --- Domain availability routing (v1.6.4) ---
+# --- Domain availability routing (v1.7.0) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -995,7 +995,7 @@ Present a friendly message — no alarm language ("error", "exceeded", "limit").
 - **Option 1 (API key):** Run Step 9 (Config File Management) — walk them through token setup.
 - **Option 2 (manual):** Run `open "{registrar search URL for domain}"` using the routing table from Step 3e.
 
-**Session memory:** Remember the user's choice for the rest of this conversation. If they hit the quota again on a different domain in the same session, automatically use their previous choice without re-asking. If they chose the registrar check (Playwright path), **still ask for consent every time** before running Step 10 (see Disclosure & Consent in Step 10) — unless the user has granted blanket permission. If they chose the manual option (whichever number it was), silently open the link each time.
+**Session memory:** Remember the user's choice for the rest of this conversation. If they hit the quota again on a different domain in the same session, automatically use their previous choice without re-asking. If they chose the Playwright path and already gave consent (see Step 10), run it directly for subsequent domains. If they chose the manual option, silently open the link each time.
 
 ---
 
@@ -1144,203 +1144,46 @@ Use `grep` + `cut` for JSON parsing — do not assume `jq` or `python3` is insta
 
 ## Step 10: Browser-Based Price Check (Playwright Fallback)
 
-This step is triggered only from the Quota Exceeded Handler in Step 8 when the user chooses the Playwright option and Playwright was confirmed available. It uses the user's local Playwright installation to visit a registrar's public domain search page and extract pricing.
-
-**Important:** This step runs entirely on the user's machine using their local browser. Domain Puppy provides the automation script; the user initiates the request. This is a client-side tool, not a hosted service.
+This step is triggered from the Quota Exceeded Handler in Step 8 when the user chooses the Playwright option and Playwright was confirmed available.
 
 ---
 
-### Disclosure & Consent
+### Consent (one-time opt-in)
 
-**Every time** before running Step 10, display this disclosure and wait for the user to confirm:
+The **first time** Playwright is about to be used in any session, display this and wait for confirmation:
 
-> **Browser price check:** You're about to use your Playwright installation to visit {registrar}'s domain search page (`{url}`) and extract pricing. This is your browser automation tool running on your machine — Domain Puppy provides the script, you initiate the request. By proceeding, you acknowledge that this is an automated visit to a third-party website and you are responsible for compliance with their terms of service.
+> **Heads up:** You chose the Playwright option. Your coding agent will write and run a Playwright script on your machine to visit a registrar's search page and extract pricing. Domain Puppy does not provide or control the script — your agent writes it. By continuing, you're opting in to this and future browser-based checks this session. You're responsible for compliance with the registrar's terms of service.
 >
-> Continue? (y/n)
+> OK to proceed? (y/n)
 
-If the user declines, fall through to the manual link handler immediately.
-
-**Always ask every time.** Do not skip this prompt based on previous consent — unless the user explicitly says something like "don't ask me again", "always use Playwright", or "skip the prompt from now on". Only then may you remember their blanket consent for the rest of the session.
+If the user confirms, **remember consent for the rest of the session** — do not re-prompt. If the user declines, fall through to the manual link handler.
 
 ---
 
-### When to Use
+### How It Works
 
-- The user has exhausted their 5 free premium checks (429 from proxy)
-- Playwright was confirmed available in the quota handler check
-- The user chose option 1 ("Check the registrar directly") from the quota handler
-- The user has confirmed the disclosure above (asked every time — never skip unless user granted blanket permission)
+**Do not use a pre-built script template.** Instead, use Playwright directly as you would for any browser automation task. You are a capable coding agent — write whatever Playwright code makes sense for the situation.
 
-Never trigger Step 10 for any other reason. It is not a replacement for the premium API — it is a fallback.
+**Goal:** Visit the registrar's domain search page, wait for results to load, extract whether the domain is available/for-sale and at what price.
 
----
-
-### Registrar Routing
-
-Determine which registrar to scrape based on TLD:
+**Registrar routing by TLD:**
 
 | TLD | Registrar | Search URL |
 |-----|-----------|------------|
 | `.st`, `.to`, `.pt`, `.my`, `.gg` | Dynadot | `https://www.dynadot.com/domain/search?domain={domain}` |
-| `.ly`, `.is` | — (skip) | Neither name.com (strips the dot) nor Dynadot (doesn't sell these TLDs) can reliably scrape pricing. The script returns `{ found: false }` and falls through to the manual link. |
+| `.ly`, `.is` | Skip — fall through to manual link | Neither registrar reliably shows pricing for these TLDs |
 | Everything else | name.com | `https://www.name.com/domain/search/{domain}` |
 
----
+**Guidelines:**
+- Validate the domain format before using it in any URL
+- Run headless — no visible browser window
+- One domain at a time, one attempt only — if it fails, fall through to the manual link
+- Never use this in brainstorm mode, TLD scans, or batch operations
+- Clean up any temp files you create
 
-### Execution
+**If you find a price:** Show it to the user, note that prices should be confirmed at checkout, and open the registrar page.
 
-Write a short Node.js script to a temp file, run it, and clean up. The script is a **static template** — no user-supplied data is interpolated into the script source. The domain is passed exclusively as a CLI argument (`process.argv[2]`).
-
-```bash
-# Discover where the Playwright Node module lives and export NODE_PATH
-PLAYWRIGHT_DIR=$(node -e "try { console.log(require.resolve('playwright').replace(/\/index\.js$/, '')) } catch(e) {}" 2>/dev/null)
-if [ -z "$PLAYWRIGHT_DIR" ]; then
-  PLAYWRIGHT_DIR=$(NODE_PATH="$HOME/node_modules" node -e "try { console.log(require.resolve('playwright').replace(/\/index\.js$/, '')) } catch(e) {}" 2>/dev/null)
-fi
-if [ -n "$PLAYWRIGHT_DIR" ]; then
-  export NODE_PATH="$(dirname "$PLAYWRIGHT_DIR")"
-fi
-
-TMPSCRIPT=$(mktemp "${TMPDIR:-/tmp}/domain-puppy-scrape-XXXXXX.cjs")
-chmod 600 "$TMPSCRIPT"
-trap 'rm -f "$TMPSCRIPT"' EXIT
-
-cat > "$TMPSCRIPT" << 'SCRAPE_EOF'
-const { chromium } = require('playwright');
-
-const domain = process.argv[2];
-if (!domain || !/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*\.[a-z]{2,}$/.test(domain)) {
-  console.log(JSON.stringify({ found: false, error: 'invalid_domain' }));
-  process.exit(0);
-}
-
-const tld = domain.split('.').pop();
-const dynadotTLDs = ['st', 'to', 'pt', 'my', 'gg'];
-const noScrapeTLDs = ['ly', 'is'];  // name.com strips the dot, Dynadot doesn't sell them
-const isDynadot = dynadotTLDs.includes(tld);
-
-if (noScrapeTLDs.includes(tld)) {
-  console.log(JSON.stringify({ found: false, error: 'tld_not_supported_by_registrar_scraper' }));
-  process.exit(0);
-}
-
-const url = isDynadot
-  ? `https://www.dynadot.com/domain/search?domain=${encodeURIComponent(domain)}`
-  : `https://www.name.com/domain/search/${encodeURIComponent(domain)}`;
-
-(async () => {
-  let browser;
-  try {
-    browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
-
-    if (isDynadot) {
-      // Dynadot: navigate, then check the TARGET domain's result (not suggestions)
-      await page.goto(url, { timeout: 15000, waitUntil: 'domcontentloaded' });
-      await new Promise(r => setTimeout(r, 3000));  // allow Vue to render
-
-      const bodyText = await page.evaluate(() => document.body.innerText).catch(() => '');
-
-      // Check if Dynadot doesn't support this TLD
-      if (/do not support|does not support|not supported/i.test(bodyText)) {
-        console.log(JSON.stringify({ found: false, registrar: 'Dynadot', url, error: 'tld_not_supported' }));
-      }
-      // Check if the target domain is shown as taken (hire a broker / whois / taken)
-      else if (new RegExp(domain.replace('.', '\\.') + '.*?(taken|hire a broker|whois)', 'is').test(bodyText)) {
-        console.log(JSON.stringify({ found: false, registrar: 'Dynadot', url, error: 'domain_taken' }));
-      }
-      // Only trust price signals if they appear near the target domain name
-      else {
-        const lines = bodyText.split('\n');
-        const targetLines = lines.filter(l => l.toLowerCase().includes(domain));
-        const targetContext = targetLines.join(' ');
-        const priceMatch = targetContext.match(/\$[\d,]+\.?\d{0,2}/);
-        if (priceMatch) {
-          console.log(JSON.stringify({ found: true, price: priceMatch[0], registrar: 'Dynadot', url }));
-        } else {
-          console.log(JSON.stringify({ found: false, registrar: 'Dynadot', url }));
-        }
-      }
-    } else {
-      // name.com: use domcontentloaded + delay (networkidle hangs on some TLDs)
-      await page.goto(url, { timeout: 15000, waitUntil: 'domcontentloaded' });
-      await new Promise(r => setTimeout(r, 3000));  // allow JS to render results
-
-      try {
-        const priceEl = await page.locator('text=/\\$[\\d,]+\\.?\\d{0,2}/')
-          .first()
-          .textContent({ timeout: 8000 });
-        if (priceEl) {
-          const match = priceEl.match(/\$[\d,]+\.?\d{0,2}/);
-          if (match) {
-            console.log(JSON.stringify({ found: true, price: match[0], registrar: 'name.com', url }));
-          } else {
-            console.log(JSON.stringify({ found: false, registrar: 'name.com', url }));
-          }
-        } else {
-          console.log(JSON.stringify({ found: false, registrar: 'name.com', url }));
-        }
-      } catch {
-        console.log(JSON.stringify({ found: false, registrar: 'name.com', url }));
-      }
-    }
-  } catch (err) {
-    const registrar = isDynadot ? 'Dynadot' : 'name.com';
-    console.log(JSON.stringify({ found: false, registrar, url, error: err.message }));
-  } finally {
-    if (browser) await browser.close();
-  }
-})();
-SCRAPE_EOF
-
-DOMAIN="brainstorm.com"  # ← set to the actual domain being checked
-node "$TMPSCRIPT" "$DOMAIN"
-```
-
-Set `DOMAIN` to the actual domain being checked (e.g., `brainstorm.com`). The domain is passed as a CLI argument via the shell variable — never interpolate it into the script source.
-
-Set the bash timeout to **30000ms** (30 seconds) for this command. The script has its own internal timeouts (15s for page load, 8s for selector).
-
----
-
-### Interpreting Results
-
-The script outputs a single line of JSON. Parse it with `grep` + `cut`:
-
-```bash
-SCRAPE_RESULT=$( <output from the node command above> )
-FOUND=$(printf '%s' "$SCRAPE_RESULT" | grep -o '"found":true' | head -1)
-PRICE=$(printf '%s' "$SCRAPE_RESULT" | grep -o '"price":"[^"]*"' | head -1 | cut -d'"' -f4)
-SCRAPE_URL=$(printf '%s' "$SCRAPE_RESULT" | grep -o '"url":"[^"]*"' | head -1 | cut -d'"' -f4)
-```
-
-**If `found` is true and a price was extracted:**
-
-> I checked {registrar}'s page directly. Here's what I found:
->
-> **{domain}** — {price}
->
-> I'll open the page so you can see the full details and complete the purchase if you'd like.
-
-Then run `open "{url}"` to open the registrar page.
-
-Add a note: "This price is from the registrar's public search page. Confirm the exact price at checkout — it may vary based on registration period or promotions."
-
-**If `found` is false (no price extracted, timeout, or any error):**
-
-Fall through to the Transparent Degradation handler for "Browser-based price check fails" — show the direct link and open it in the user's browser.
-
----
-
-### Important Constraints
-
-- **Static script template:** The temp file contains zero user-supplied data. The domain is passed only as `process.argv[2]`. This prevents code injection regardless of domain content.
-- **Domain validation:** The script validates the domain against `/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*\.[a-z]{2,}$/` before using it. Invalid domains produce `{ "found": false }` — no error throw.
-- **Temp file cleanup:** The `trap 'rm -f "$TMPSCRIPT"' EXIT` in the bash wrapper ensures cleanup on all exit paths (success, failure, signal).
-- **CJS format:** The script uses `.cjs` extension and `require()` (CommonJS) because Playwright's Node.js API uses CommonJS by default and this avoids ESM compatibility issues across Node versions.
-- **Headless only:** The browser launches in headless mode. No visible window.
-- **One attempt per domain:** If the scrape fails, do not retry. Fall through to manual link immediately.
-- **No bulk scraping:** Step 10 runs for a single domain at a time, only when triggered by the quota handler. It is never used in brainstorm mode, TLD scans, or Track B.
+**If the scrape fails or finds nothing:** Fall through to the Transparent Degradation handler — show the direct link and open it in the user's browser.
 
 ---
 
