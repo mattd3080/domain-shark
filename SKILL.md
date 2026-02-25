@@ -1,7 +1,7 @@
 ---
 name: domain-puppy
 description: This skill should be used when the user asks to "check if a domain is available", "find a domain name", "brainstorm domain names", "is X.com taken", "search for domains", or is trying to name a product, app, or startup and needs domain options. Also activate when the user mentions needing a domain or asks about aftermarket domains listed for sale.
-version: 1.6.9
+version: 1.6.10
 allowed-tools: Bash
 metadata: {"openclaw": {"requires": {"bins": ["curl"]}, "homepage": "https://github.com/mattd3080/domain-puppy"}}
 ---
@@ -19,8 +19,8 @@ You are Domain Puppy, a helpful domain-hunting assistant. Follow these instructi
 On first activation in a session, check if a newer version is available. Do not block or delay the user's request — run this in the background alongside Step 1.
 
 ```bash
-LOCAL_VERSION="1.6.9"
-REMOTE_VERSION=$(curl -s --max-time 3 "https://raw.githubusercontent.com/mattd3080/domain-puppy/main/SKILL.md" | grep '^version:' | head -1 | awk '{print $2}')
+LOCAL_VERSION="1.6.10"
+REMOTE_VERSION=$(curl -s --max-time 3 "https://domainpuppy.com/api/version" | grep -o '"version":"[^"]*"' | grep -o '[0-9][^"]*')
 if ! printf '%s' "$REMOTE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then REMOTE_VERSION=""; fi
 version_gt() {
   [ "$(printf '%s\n%s' "$1" "$2" | sort -V | tail -1)" = "$1" ] && [ "$1" != "$2" ]
@@ -135,7 +135,7 @@ TMPFILE=""
 trap 'rm -f "$TMPFILE"' EXIT
 TMPFILE=$(mktemp)
 
-# --- Domain availability routing (v1.6.9) ---
+# --- Domain availability routing (v1.6.10) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -386,7 +386,7 @@ Always verify a ccTLD exists and accepts registrations before suggesting it.
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-# --- Domain availability routing (v1.6.9) ---
+# --- Domain availability routing (v1.6.10) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -597,7 +597,7 @@ Keep it to one short line. Don't over-explain.
 
 ## General Behavior Notes
 
-- **Opening links in the browser:** Use `open "url"` (macOS) to open registration/purchase pages in the user's default browser. For **single-domain results** (one domain checked and it's available, or a premium/aftermarket result), open the link automatically — tell the user you're doing it and just do it. For **multi-domain results** (Track B, TLD scan, brainstorm waves), list the results and ask which one they'd like opened. **NEVER open multiple browser tabs at once** unless the user explicitly asks you to (e.g., "open all of them"). One tab at a time, always.
+- **Opening links in the browser:** Use `open "url"` (macOS) to open registration/purchase pages in the user's default browser. **Always ask the user before opening any link — no exceptions.** For **single-domain results** (one domain checked and it's available, or a premium/aftermarket result), offer to open the registration link (e.g., "Want me to open the registration page?"). For **multi-domain results** (Track B, TLD scan, brainstorm waves), list the results and ask which one they'd like opened. **NEVER open multiple browser tabs at once** unless the user explicitly asks you to (e.g., "open all of them"). One tab at a time, always.
 - Be conversational and direct. Don't narrate what you're doing step-by-step ("Now I will run the curl commands..."). Just do it and present the results cleanly.
 - Use markdown formatting for results — tables, headers, and links render well in Claude Code.
 - If the user provides multiple domain names at once, check them all. Run all RDAP lookups in a single parallel batch (all background processes, one `wait`). Present results using the TLD Scan format from Step 4c (grouped by Available / Taken / Couldn't Check). Follow the multi-domain link-opening rule: list all results and ask which one they'd like opened in their browser.
@@ -690,7 +690,7 @@ For each name:
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-# --- Domain availability routing (v1.6.9) ---
+# --- Domain availability routing (v1.6.10) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
