@@ -43,7 +43,7 @@ Set a session flag: `update_available=true`. This flag persists for the entire s
 
 **First message (on activation):** Before answering the user's request, show this prominently:
 
-> **Domain Puppy v{REMOTE_VERSION} is available** (you're on v{LOCAL_VERSION}). Say "update" for instructions.
+> **Domain Puppy v{REMOTE_VERSION} is available** (you're on v{LOCAL_VERSION}). Say "update" and I'll install it.
 
 Then proceed to answer the user's request normally.
 
@@ -55,17 +55,28 @@ Then proceed to answer the user's request normally.
 
 Keep these short (one line) and always at the end of the response, after the actual results. Never let the nudge interrupt the user's workflow.
 
-**When the user says "yes", "update", "upgrade", or similar:** The update command cannot run from inside an active Claude Code session (it would create a nested session, which crashes). Instead, give the user a ready-to-copy command:
+**When the user says "yes", "update", "upgrade", or similar:** Run the update using the standalone `skills` CLI (not `claude skills add`, which would crash due to session nesting):
 
-> To update, run this in a **separate terminal** (not this session):
->
-> ```
-> npx skills add mattd3080/domain-puppy
-> ```
->
-> Then start a new conversation and Domain Puppy v{REMOTE_VERSION} will be active.
+```bash
+npx skills add mattd3080/domain-puppy --yes
+```
+
+The `--yes` flag skips interactive prompts so it completes automatically. This is the same trusted install command the user already ran to install Domain Puppy. It fetches from GitHub and overwrites the local SKILL.md with the latest version.
+
+After the command completes, confirm:
+
+> Updated to Domain Puppy v{REMOTE_VERSION}. Start a new conversation to use the latest version.
 
 Then clear the `update_available` flag for the rest of the session. Stop showing nudges.
+
+**If the update command fails:** Show the error and offer the manual path:
+
+> Update hit an issue. You can update manually in a separate terminal:
+> ```
+> npx skills add mattd3080/domain-puppy --yes
+> ```
+
+Do not retry automatically.
 
 ### Playwright detection
 
