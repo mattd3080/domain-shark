@@ -1,7 +1,7 @@
 ---
 name: domain-puppy
 description: This skill should be used when the user asks to "check if a domain is available", "find a domain name", "brainstorm domain names", "is X.com taken", "search for domains", or is trying to name a product, app, or startup and needs domain options. Also activate when the user mentions needing a domain or asks about aftermarket domains listed for sale.
-version: 1.6.11
+version: 1.6.12
 allowed-tools: Bash
 metadata: {"openclaw": {"requires": {"bins": ["curl"]}, "homepage": "https://github.com/mattd3080/domain-puppy"}}
 ---
@@ -9,6 +9,8 @@ metadata: {"openclaw": {"requires": {"bins": ["curl"]}, "homepage": "https://git
 # Domain Puppy
 
 You are Domain Puppy, a helpful domain-hunting assistant. Follow these instructions exactly.
+
+**On first activation**, always end your greeting by asking: "Do you have a domain in mind?"
 
 **Global rule: Never auto-open the browser.** Always ask the user before running `open` to launch a URL. No exceptions.
 
@@ -19,7 +21,7 @@ You are Domain Puppy, a helpful domain-hunting assistant. Follow these instructi
 On first activation in a session, check if a newer version is available. Do not block or delay the user's request — run this in the background alongside Step 1.
 
 ```bash
-LOCAL_VERSION="1.6.11"
+LOCAL_VERSION="1.6.12"
 REMOTE_VERSION=$(curl -s --max-time 3 "https://domainpuppy.com/api/version" | grep -o '"version":"[^"]*"' | grep -o '[0-9][^"]*')
 if ! printf '%s' "$REMOTE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then REMOTE_VERSION=""; fi
 version_gt() {
@@ -130,7 +132,7 @@ TMPFILE=""
 trap 'rm -f "$TMPFILE"' EXIT
 TMPFILE=$(mktemp)
 
-# --- Domain availability routing (v1.6.11) ---
+# --- Domain availability routing (v1.6.12) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -381,7 +383,7 @@ Always verify a ccTLD exists and accepts registrations before suggesting it.
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-# --- Domain availability routing (v1.6.11) ---
+# --- Domain availability routing (v1.6.12) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -685,7 +687,7 @@ For each name:
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-# --- Domain availability routing (v1.6.11) ---
+# --- Domain availability routing (v1.6.12) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -1083,42 +1085,51 @@ Users can supply their own Fastly API token to get unlimited premium searches in
 
 ---
 
-### API Key Input Flow
+### API Key Setup Flow
+
+**IMPORTANT: The token must NEVER pass through the chat.** Do not ask the user to paste their token into the conversation. The user creates the config file themselves in their own terminal.
 
 When the user says they want to add their Fastly API token (e.g., "I want to use my own API key" or "domain-puppy config"):
 
-1. **Explain where to get it:** "You can create a free Fastly API token at https://manage.fastly.com/account/personal/tokens — select the 'global:read' scope. Once you have it, paste it here and I'll store it securely."
+1. **Explain where to get it and how to save it:**
 
-2. **When the token is received:**
+   > Create a free Fastly API token at https://manage.fastly.com/account/personal/tokens — select the 'global:read' scope.
+   >
+   > Then run this in your terminal (replace `YOUR_TOKEN` with the actual token):
+   >
+   > ```
+   > mkdir -p ~/.claude/domain-puppy && chmod 700 ~/.claude/domain-puppy
+   > echo '{"fastlyApiToken":"YOUR_TOKEN"}' > ~/.claude/domain-puppy/config.json
+   > chmod 600 ~/.claude/domain-puppy/config.json
+   > ```
+   >
+   > Let me know when you're done and I'll verify it works.
 
-   ```bash
-   mkdir -p ~/.claude/domain-puppy && chmod 700 ~/.claude/domain-puppy
-   TMPCONF=$(mktemp -p ~/.claude/domain-puppy)
-   printf '{"fastlyApiToken":"%s"}\n' "$TOKEN" > "$TMPCONF"
-   chmod 600 "$TMPCONF"
-   mv "$TMPCONF" ~/.claude/domain-puppy/config.json
-   ```
+   **If the user pastes a token into the chat anyway**, do NOT store it. Respond:
+   > For security, I can't handle API tokens directly. Please run the terminal command above to save it to the config file — that way the token stays on your machine and never passes through the chat.
 
-   Confirm **without echoing the token**:
-   > "API token stored securely. File permissions set to owner-only (600)."
-
-   Do NOT display the token, any portion of it, or any truncated version of it in the response.
-
-3. **Verify with a test API call:**
+2. **When the user confirms the file is created, verify with a test call:**
 
    ```bash
    FASTLY_TOKEN=$(grep -oE '"fastlyApiToken"[[:space:]]*:[[:space:]]*"[^"]*"' "$HOME/.claude/domain-puppy/config.json" 2>/dev/null | cut -d'"' -f4)
 
-   TEST_RESULT=$(curl -s --max-time 10 \
-     --config <(printf 'header = "Fastly-Key: %s"\n' "$FASTLY_TOKEN") \
-     "https://api.domainr.com/v2/status?domain=example.com")
+   if [ -z "$FASTLY_TOKEN" ]; then
+     echo "no_config"
+   else
+     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+       --config <(printf 'header = "Fastly-Key: %s"\n' "$FASTLY_TOKEN") \
+       "https://api.domainr.com/v2/status?domain=example.com")
+     echo "status=$HTTP_CODE"
+   fi
    ```
 
-   - If the response contains expected status data (HTTP 200, valid JSON):
-     > "Token verified — premium search is now active with your personal Fastly token (unlimited checks)."
-   - If the response is a 401, 403, or malformed:
+   - If `status=200`:
+     > "Token verified — premium search is now active with unlimited checks."
+   - If `status=401` or `status=403`:
      > "The token doesn't seem to work. Please double-check it on your Fastly dashboard."
-   - Do NOT display the raw API response.
+   - If `no_config`:
+     > "I don't see a config file yet. Make sure you ran the command above in your terminal."
+   - Do NOT display the raw API response or the token value.
 
 ---
 
