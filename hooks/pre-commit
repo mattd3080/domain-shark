@@ -58,12 +58,23 @@ if git diff --cached --name-only | grep -qF "SKILL.md"; then
   FRONT_VER=$(git show :SKILL.md | grep '^version:' | head -1 | awk '{print $2}')
   LOCAL_VER=$(git show :SKILL.md | grep 'LOCAL_VERSION=' | head -1 | sed 's/.*LOCAL_VERSION="\([^"]*\)".*/\1/')
 
+  # Check that frontmatter and LOCAL_VERSION match each other
   if [ -n "$FRONT_VER" ] && [ -n "$LOCAL_VER" ] && [ "$FRONT_VER" != "$LOCAL_VER" ]; then
     echo "ERROR: Version mismatch in SKILL.md"
     echo "  frontmatter version: $FRONT_VER"
     echo "  LOCAL_VERSION:       $LOCAL_VER"
     echo ""
     echo "Run: ./hooks/bump-version.sh $FRONT_VER"
+    ERRORS=1
+  fi
+
+  # Check that version was actually bumped (not same as last committed version)
+  PREV_VER=$(git show HEAD:SKILL.md 2>/dev/null | grep '^version:' | head -1 | awk '{print $2}')
+  if [ -n "$PREV_VER" ] && [ -n "$FRONT_VER" ] && [ "$PREV_VER" = "$FRONT_VER" ]; then
+    echo "ERROR: SKILL.md changed but version was not bumped"
+    echo "  current version: $FRONT_VER"
+    echo ""
+    echo "Run: ./hooks/bump-version.sh <new-version>"
     ERRORS=1
   fi
 fi
