@@ -1,7 +1,7 @@
 ---
 name: domain-puppy
 description: This skill should be used when the user asks to "check if a domain is available", "find a domain name", "brainstorm domain names", "is X.com taken", "search for domains", or is trying to name a product, app, or startup and needs domain options. Also activate when the user mentions needing a domain or asks about aftermarket domains listed for sale.
-version: 1.6.3
+version: 1.6.4
 allowed-tools: Bash
 metadata: {"openclaw": {"requires": {"bins": ["curl"]}, "homepage": "https://github.com/mattd3080/domain-puppy"}}
 ---
@@ -17,7 +17,7 @@ You are Domain Puppy, a helpful domain-hunting assistant. Follow these instructi
 On first activation in a session, check if a newer version is available. Do not block or delay the user's request — run this in the background alongside Step 1.
 
 ```bash
-LOCAL_VERSION="1.6.3"
+LOCAL_VERSION="1.6.4"
 REMOTE_VERSION=$(curl -s --max-time 3 "https://raw.githubusercontent.com/mattd3080/domain-puppy/main/SKILL.md" | grep '^version:' | head -1 | awk '{print $2}')
 if ! printf '%s' "$REMOTE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then REMOTE_VERSION=""; fi
 version_gt() {
@@ -132,7 +132,7 @@ Check the single domain determined in Step 3a. The following is a template using
 TMPFILE=$(mktemp)
 trap 'rm -f "$TMPFILE"' EXIT
 
-# --- Domain availability routing (v1.6.3) ---
+# --- Domain availability routing (v1.6.4) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -381,7 +381,7 @@ Always verify a ccTLD exists and accepts registrations before suggesting it.
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
-# --- Domain availability routing (v1.6.3) ---
+# --- Domain availability routing (v1.6.4) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -690,7 +690,7 @@ For each name:
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
-# --- Domain availability routing (v1.6.3) ---
+# --- Domain availability routing (v1.6.4) ---
 rdap_url() {
   local domain=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   local tld="${domain##*.}"
@@ -959,7 +959,7 @@ else
 fi
 ```
 
-Store the `node_path` value from the output — it is needed in Step 10 to set `NODE_PATH` so the temp script can find the module.
+Step 10 discovers the module path on its own — you do not need to carry any value from this detection step.
 
 Present a friendly message — no alarm language ("error", "exceeded", "limit"). The options depend on the result above.
 
@@ -1191,14 +1191,19 @@ Determine which registrar to scrape based on TLD:
 
 Write a short Node.js script to a temp file, run it, and clean up. The script is a **static template** — no user-supplied data is interpolated into the script source. The domain is passed exclusively as a CLI argument (`process.argv[2]`).
 
-Use the `node_path` value from the Playwright detection in Step 8 to set `NODE_PATH`, so the temp script can find the module regardless of where it's installed.
-
 ```bash
+# Discover where the Playwright Node module lives and export NODE_PATH
+PLAYWRIGHT_DIR=$(node -e "try { console.log(require.resolve('playwright').replace(/\/index\.js$/, '')) } catch(e) {}" 2>/dev/null)
+if [ -z "$PLAYWRIGHT_DIR" ]; then
+  PLAYWRIGHT_DIR=$(NODE_PATH="$HOME/node_modules" node -e "try { console.log(require.resolve('playwright').replace(/\/index\.js$/, '')) } catch(e) {}" 2>/dev/null)
+fi
+if [ -n "$PLAYWRIGHT_DIR" ]; then
+  export NODE_PATH="$(dirname "$PLAYWRIGHT_DIR")"
+fi
+
 TMPSCRIPT=$(mktemp "${TMPDIR:-/tmp}/domain-puppy-scrape-XXXXXX.cjs")
 chmod 600 "$TMPSCRIPT"
 trap 'rm -f "$TMPSCRIPT"' EXIT
-# Set NODE_PATH from Step 8 detection (e.g., /Users/you/node_modules)
-export NODE_PATH="{node_path from Step 8 detection}"
 
 cat > "$TMPSCRIPT" << 'SCRAPE_EOF'
 const { chromium } = require('playwright');
