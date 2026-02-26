@@ -11,7 +11,7 @@ Domain Puppy is a Claude Code skill that turns your terminal into a domain resea
 - **Brainstorm with AI** — Generate hundreds of domain name ideas across 7 naming categories using 10 proven techniques
 - **Instant availability checking** — RDAP lookups run in parallel batches, no API key required
 - **Batch check 50–100+ domains in seconds** — parallel checking means no waiting around
-- **Premium aftermarket search** — Find already-registered domains for sale via Fastly Domain Research API (5 free checks/month per user, or unlimited with your own key)
+- **Premium aftermarket search** — Find already-registered domains for sale via Fastly Domain Research API (5 free checks/month per user)
 - **Affiliate-powered registration links** — Domains link directly to [name.com](https://www.name.com) for registration and [Sedo](https://sedo.com) for aftermarket purchases
 
 ---
@@ -79,29 +79,6 @@ Domain Puppy generates waves of names — Quick Wave (fast ideas), Standard Wave
 | Domain hacks | 80+ curated examples across creative TLD combinations |
 | Thematic TLD matching | Suggests TLDs based on 12 project types |
 | Aftermarket search | Premium search via Fastly Domain Research API |
-| Local config | Secure local storage for your API key (chmod 600) |
-
----
-
-## Premium Search Setup (Optional)
-
-By default, Domain Puppy includes **5 free premium aftermarket checks per month** — no setup needed.
-
-For unlimited premium searches, add your own [Fastly API token](https://manage.fastly.com/account/personal/tokens) (free with a Fastly account):
-
-**Option A: Let Claude handle it**
-
-Just say "I want to add my API key" during a `/domain` session — Claude will prompt you and store it securely.
-
-**Option B: Manual setup**
-
-```bash
-mkdir -p ~/.claude/domain-puppy && chmod 700 ~/.claude/domain-puppy
-echo '{ "fastlyApiToken": "your-token-here" }' > ~/.claude/domain-puppy/config.json
-chmod 600 ~/.claude/domain-puppy/config.json
-```
-
-Once set, all premium searches bypass the shared proxy and use your key directly.
 
 ---
 
@@ -111,10 +88,9 @@ Once set, all premium searches bypass the shared proxy and use your key directly
 
 Additional details:
 
-- **Free RDAP/WHOIS/DNS checks** go directly from your machine — we never see them
+- **Availability checks** use MCP tool calls routed through a Cloudflare Worker to RDAP/WHOIS registries — no domain data is stored
 - **Premium search via proxy** — your domain is forwarded to Fastly's Domain Research API and not stored by us
-- **With your own API key** — premium searches bypass our proxy entirely and go straight to the Fastly API
-- **Config file** is stored at `~/.claude/domain-puppy/config.json` with `chmod 600` (owner-read-only)
+- **Playwright fallback** — when the premium quota is exhausted, the skill can optionally scrape registrar pricing pages with explicit user consent (one-time opt-in per session)
 
 ---
 
@@ -123,21 +99,17 @@ Additional details:
 ```
 /domain (Claude Code skill)
     |
-    +-- Free checks:  curl → RDAP endpoints (parallel)
-    |                 Cloudflare Worker → WHOIS (13 ccTLDs without RDAP)
+    +-- Availability:  MCP tool call → Cloudflare Worker → RDAP/WHOIS registries
     |
-    +-- Premium:      Cloudflare Worker proxy → Fastly Domain Research API
-    |                 (or direct to Fastly API with your own key)
+    +-- Premium:       MCP tool call → Cloudflare Worker → Fastly Domain Research API
     |
-    +-- Fallback:     Playwright → registrar pricing pages (when API quota exhausted)
+    +-- Fallback:      Playwright → registrar pricing pages (user opt-in, when API quota exhausted)
 ```
 
 1. The skill file runs entirely within Claude Code — no daemon, no background process
-2. Free availability checks hit RDAP servers directly from your machine
-3. For 13 ccTLDs without RDAP support, the skill routes WHOIS checks through the Cloudflare Worker proxy
-4. Premium aftermarket search routes through a Cloudflare Worker that manages the shared quota and forwards requests to Fastly
-5. If you supply your own Fastly API token, premium searches skip the proxy entirely
-6. When the free premium quota is exhausted and Playwright is installed, the skill can scrape registrar pricing pages directly as a fallback
+2. Availability checks use MCP tool calls (`mcp__domain_puppy__check`) routed through a local MCP server to the Cloudflare Worker, which queries RDAP/WHOIS registries
+3. Premium aftermarket search uses MCP tool calls (`mcp__domain_puppy__premium_check`) routed through the same Cloudflare Worker to the Fastly Domain Research API
+4. When the free premium quota is exhausted and the user opts in, the skill can use Playwright to scrape registrar pricing pages directly as a fallback
 
 ---
 
@@ -181,7 +153,7 @@ All guards use Cloudflare KV for state and **fail open** — if KV is unavailabl
 
 | Name | Type | Description |
 |---|---|---|
-| `FASTLY_API_TOKEN` | Secret | Fastly API token for Domain Research API access |
+| `FASTLY_API_TOKEN` | Secret | Server-side Fastly API token (Cloudflare secret — never exposed to clients) |
 | `ALERT_WEBHOOK` | Secret (optional) | Webhook URL for circuit breaker alerts (Slack/Discord/any) |
 | `MONTHLY_QUOTA_LIMIT` | Env var | Monthly request cap before circuit breaker trips (default: 8000) |
 | `FREE_CHECKS_PER_IP` | Env var | Free premium checks per IP per month (default: 5) |
@@ -232,7 +204,7 @@ wrangler secret put FASTLY_API_TOKEN
 wrangler deploy
 ```
 
-Then find and replace `https://domain-puppy-proxy.mattjdalley.workers.dev/v1/premium-check` in `SKILL.md` with your deployed worker URL.
+Then update the worker URL in `mcp/src/handlers.js` to point to your deployed worker.
 
 ### Secret leak prevention
 

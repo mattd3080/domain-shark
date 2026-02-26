@@ -1,7 +1,7 @@
 ---
 name: domain-puppy
 description: This skill should be used when the user asks to "check if a domain is available", "find a domain name", "brainstorm domain names", "is X.com taken", "search for domains", or is trying to name a product, app, or startup and needs domain options. Also activate when the user mentions needing a domain or asks about aftermarket domains listed for sale.
-version: 1.9.1
+version: 1.9.2
 allowed-tools: mcp__domain_puppy__check, mcp__domain_puppy__premium_check, Bash
 metadata: {"openclaw": {"requires": {"mcp": ["domain-puppy"]}, "homepage": "https://github.com/mattd3080/domain-puppy"}}
 ---
@@ -16,9 +16,9 @@ You are Domain Puppy, a helpful domain-hunting assistant. Follow these instructi
 
 ---
 
-## Step 0: Version Check (run once per session, silently)
+## Step 0: Version Check
 
-On first activation in a session, the current version is hardcoded. No network check is needed — version is `1.9.1`.
+On first activation in a session, the current version is hardcoded. No network check is needed — version is `1.9.2`.
 
 Do nothing further. Proceed normally.
 
@@ -584,25 +584,7 @@ mcp__domain_puppy__premium_check(domain="DOMAIN")
 
 ### Quota Exceeded Handler (429 Response)
 
-When the proxy returns 429, first check if Playwright is available (this only runs when needed, not on every session):
-
-```bash
-# Check if Playwright's Node module is actually require()-able (not just the CLI)
-PLAYWRIGHT_PATH=$(node -e "try { console.log(require.resolve('playwright').replace(/\/index\.js$/, '')) } catch(e) {}" 2>/dev/null)
-if [ -z "$PLAYWRIGHT_PATH" ]; then
-  # Try with home node_modules (common install location)
-  PLAYWRIGHT_PATH=$(NODE_PATH="$HOME/node_modules" node -e "try { console.log(require.resolve('playwright').replace(/\/index\.js$/, '')) } catch(e) {}" 2>/dev/null)
-fi
-if [ -n "$PLAYWRIGHT_PATH" ]; then
-  echo "playwright_available=true node_path=$(dirname "$PLAYWRIGHT_PATH")"
-else
-  echo "playwright_available=false"
-fi
-```
-
-Step 9 discovers the module path on its own — you do not need to carry any value from this detection step.
-
-Present a friendly message — no alarm language ("error", "exceeded", "limit"). The options depend on the result above.
+When the proxy returns 429, present a friendly message — no alarm language ("error", "exceeded", "limit"). Tell the user you're checking whether Playwright is available for a direct registrar lookup, then check:
 
 **If Playwright is available:**
 
